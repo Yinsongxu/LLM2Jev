@@ -93,15 +93,14 @@ if __name__ == "__main__":
 ```python
 from llm2jev import LLM2Jev, TransformersBackend
 
-backend = TransformersBackend(model_path, multimodal=True, dtype="bfloat16")
-response = LLM2Jev(backend=backend).evaluate(request)
-print(response.json)
+with TransformersBackend(model_path, multimodal=True, dtype="bfloat16") as backend:
+    response = LLM2Jev(backend=backend).evaluate(request)
+    print(response.json)
 ```
 
 ## MLX 后端
 
-在 Apple Silicon 的 macOS 环境中安装 `mlx-vlm` extra，并通过 `multimodal=True`
-加载本地 MLX-VLM 兼容的因果模型：
+创建后端时指定 `multimodal=True`：
 
 ```python
 from llm2jev import LLM2Jev, MLXBackend
@@ -111,34 +110,10 @@ with MLXBackend(model_path, multimodal=True, batch_size=8) as backend:
     print(response.json)
 ```
 
-仓库示例支持相同的图片来源及两种放置位置：
-
-```bash
-uv run --extra mlx-vlm python examples/multimodal_inference.py \
-  --backend mlx --model-path /path/to/mlx-vlm \
-  --image /path/to/photo.png --placement state
-```
-
-Qwen2-VL 与 Qwen2.5-VL 支持请求内图片特征复用、带图片内容摘要的前缀缓存、
-分块 prefill 和等长候选批量评分；其他因果 VLM 逐条执行完整 prefill。
-图片内容变化后，不会仅因路径或占位 token 相同而复用旧图片的 KV 状态。
-MLX-VLM 旧式 `BaseImageProcessor` 路径每个 prompt 仅支持一张图片，多图会报错；
-其他 processor 遵循模型的图片容量。详见 [MLX 模型支持范围](mlx_zh.md#图片与模型支持范围)。
 
 ## HTTP API 调用
 
-按照[使用指南](usage_zh.md#system-one-http-api)启动 SGLang 多模态服务，
-或在 Apple Silicon 上启动 MLX-VLM：
-
-```bash
-uv run --extra mlx-vlm --extra server llm2jev-serve \
-  --backend mlx --multimodal --model-path /path/to/mlx-vlm \
-  --served-model-name local-vlm --port 30000
-```
-
-两种服务均向 `POST /v1/systemone` 提交相同结构的请求。
-若配置了 `LLM2JEV_API_KEY`，MLX 会自动读取，客户端需发送下例的 Bearer header；
-未配置鉴权时可省略该 header。图片的本地路径和 `file://` URI 由模型服务所在机器解析。
+按照[使用指南](usage_zh.md#online-http-服务)启动 SGLang 多模态服务。
 
 
 ```bash

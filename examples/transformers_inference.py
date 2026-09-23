@@ -47,9 +47,9 @@ def main() -> None:
         },
     )
 
-    backend = TransformersBackend(args.model_path)
-    response = LLM2Jev(backend=backend).evaluate(request)
-    print(response.json)
+    with TransformersBackend(args.model_path) as backend:
+        response = LLM2Jev(backend=backend).evaluate(request)
+        print(response.json)
 
 
 if __name__ == "__main__":

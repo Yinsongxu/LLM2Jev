@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from llm2jev import Choice, JevRequest, Noul, Score
 from test_sglang_fakes import native_modules, score_result
-from llm2jev.sglang_server import (
+from llm2jev.server.sglang_server import (
     _evaluate_request,
     _parse_request,
     _parse_submission_args,
@@ -186,7 +186,7 @@ class SystemOneEvaluationTests(unittest.IsolatedAsyncioTestCase):
                     register_systemone_route(submission=mode)
                     route = app.add_api_route.call_args.args[1]
                     response = Mock()
-                    with patch("llm2jev.sglang_server._evaluate_request", new_callable=AsyncMock, return_value=response) as evaluate:
+                    with patch("llm2jev.server.sglang_server._evaluate_request", new_callable=AsyncMock, return_value=response) as evaluate:
                         self.assertEqual(await route(payload), response.to_dict())
                         evaluate.assert_awaited_once_with(
                             _parse_request(payload), manager, submission=mode
@@ -284,7 +284,7 @@ class ServerArgumentTests(unittest.TestCase):
         }
         with patch.dict("sys.modules", modules):
             for option, expected in (([], "staged"), (["--submission", "all"], "all")):
-                with self.subTest(mode=expected), patch("llm2jev.sglang_server.register_systemone_route") as register:
+                with self.subTest(mode=expected), patch("llm2jev.server.sglang_server.register_systemone_route") as register:
                     main(["--model-path", "local-model"] + option)
                     prepare.assert_called_with(["--model-path", "local-model"])
                     register.assert_called_once_with(submission=expected)

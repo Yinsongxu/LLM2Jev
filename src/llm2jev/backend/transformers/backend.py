@@ -99,6 +99,8 @@ class TransformersBackend:
         contains_images = has_images(prompt_values)
         if contains_images and self.processor is None:
             raise ValueError("image prompts require TransformersBackend(multimodal=True)")
+        if self.model is None:
+            raise RuntimeError("TransformersBackend is closed")
 
         if contains_images:
             rendered_images, image_batches = prepare_image_prompts(
@@ -163,3 +165,17 @@ class TransformersBackend:
             device=attention_mask.device,
         ).expand_as(attention_mask)
         return positions.masked_fill(attention_mask == 0, -1).max(dim=1).values
+
+    def close(self) -> None:
+        """Release references to the model and tokenizer; safe to call repeatedly."""
+        self.model = None
+        self.processor = None
+        self.tokenizer = None
+
+    def __enter__(self) -> TransformersBackend:
+        if self.model is None:
+            raise RuntimeError("TransformersBackend is closed")
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self.close()

@@ -12,7 +12,7 @@ from llm2jev import (
 )
 from llm2jev.backend.transformers.image_inputs import load_transformers_images, prepare_image_prompts
 from llm2jev.backend.sglang.scoring import score_output
-from llm2jev.sglang_server import _evaluate_request, _parse_request
+from llm2jev.server.sglang_server import _evaluate_request, _parse_request
 from test_sglang_fakes import native_modules, score_result
 
 

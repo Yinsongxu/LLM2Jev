@@ -8,23 +8,22 @@ version = "0.1.0"
 description = "Adapt language models to Jev-style structured questions."
 requires-python = ">=3.10"
 dependencies = [
+    "fastapi>=0.115",
     "openai>=2.6.1",
+    "uvicorn>=0.30",
 ]
 
 [project.scripts]
-llm2jev-serve = "llm2jev.server:main"
+llm2jev-serve = "llm2jev.server.server:main"
 
 [project.optional-dependencies]
 mlx = [
     "mlx-lm>=0.31.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "mlx-vlm>=0.7.2; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 mlx-vlm = [
     "mlx-lm>=0.31.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx-vlm>=0.7.2; sys_platform == 'darwin' and platform_machine == 'arm64'",
-]
-server = [
-    "fastapi>=0.115",
-    "uvicorn>=0.30",
 ]
 transformers = [
     "torch>=2.0",

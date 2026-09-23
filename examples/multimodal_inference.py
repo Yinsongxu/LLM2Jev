@@ -41,10 +41,10 @@ def main() -> None:
         },
     )
     if args.backend == "transformers":
-        backend = TransformersBackend(
+        with TransformersBackend(
             args.model_path, multimodal=True, device=args.device, dtype="bfloat16", batch_size=1,
-        )
-        print(LLM2Jev(backend=backend).evaluate(request).json)
+        ) as backend:
+            print(LLM2Jev(backend=backend).evaluate(request).json)
     elif args.backend == "mlx":
         with MLXBackend(
             args.model_path, multimodal=True, submission=args.submission,

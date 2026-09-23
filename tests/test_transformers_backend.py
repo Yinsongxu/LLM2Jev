@@ -55,6 +55,26 @@ class TransformersBackendTests(unittest.TestCase):
             ),
         )
 
+    def test_context_manager_closes_backend_and_rejects_future_scoring(self) -> None:
+        backend = TransformersBackend.__new__(TransformersBackend)
+        backend.model = object()
+        backend.processor = object()
+        backend.tokenizer = object()
+
+        with backend as entered:
+            self.assertIs(entered, backend)
+
+        self.assertIsNone(backend.model)
+        self.assertIsNone(backend.processor)
+        self.assertIsNone(backend.tokenizer)
+        backend.close()
+        with self.assertRaisesRegex(RuntimeError, "closed"):
+            backend.score(
+                model="local", prompts=(({"role": "user", "content": "text"},),),
+            )
+        with self.assertRaisesRegex(RuntimeError, "closed"):
+            backend.__enter__()
+
 
 if __name__ == "__main__":
     unittest.main()

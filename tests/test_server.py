@@ -4,24 +4,23 @@ from contextlib import redirect_stderr
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from llm2jev import server
-from llm2jev import mlx_server
+from llm2jev.server import mlx_server, server, transformers_server
 from llm2jev.inference.request_parser import parse_request
-from llm2jev.sglang_server import _parse_request
+from llm2jev.server.sglang_server import _parse_request
 
 
 class ServerDispatchTests(unittest.TestCase):
     def test_default_preserves_all_sglang_arguments(self) -> None:
         arguments = ["--model-path", "model", "--tp", "2", "--submission", "all"]
-        with patch("llm2jev.sglang_server.main") as serve:
+        with patch("llm2jev.server.sglang_server.main") as serve:
             server.main(arguments)
         serve.assert_called_once_with(arguments)
 
     def test_selects_backend_with_both_option_syntaxes(self) -> None:
-        for backend in ("sglang", "mlx"):
+        for backend in ("sglang", "mlx", "transformers"):
             for option in (["--backend", backend], [f"--backend={backend}"]):
                 with self.subTest(backend=backend, option=option):
-                    with patch(f"llm2jev.{backend}_server.main") as serve:
+                    with patch(f"llm2jev.server.{backend}_server.main") as serve:
                         server.main(["--model-path", "model"] + option)
                     serve.assert_called_once_with(["--model-path", "model"])
 
@@ -82,6 +81,40 @@ class MLXServerArgumentTests(unittest.TestCase):
             "weights", served_model_name="local", api_key="secret", multimodal=True,
             batch_size=4, prefill_step_size=64, submission="all", max_cache_entries=16,
             max_cache_bytes=1000,
+        )
+        run.assert_called_once_with(create.return_value, host="0.0.0.0", port=8000)
+
+
+class TransformersServerArgumentTests(unittest.TestCase):
+    def test_defaults_and_options(self) -> None:
+        defaults = transformers_server._parse_args(["--model-path", "model"])
+        self.assertEqual(defaults.batch_size, 8)
+        self.assertEqual(defaults.dtype, "auto")
+        self.assertEqual(defaults.submission, "staged")
+        self.assertEqual(defaults.port, 30000)
+        args = transformers_server._parse_args([
+            "--model-path", "model", "--device", "cuda:1", "--dtype", "bfloat16",
+            "--batch-size", "4", "--multimodal", "--submission", "all",
+        ])
+        self.assertEqual(args.device, "cuda:1")
+        self.assertEqual(args.dtype, "bfloat16")
+        self.assertEqual(args.batch_size, 4)
+        self.assertTrue(args.multimodal)
+        self.assertEqual(args.submission, "all")
+
+    def test_main_starts_server_with_transformers_options(self) -> None:
+        run = Mock()
+        with patch.dict("sys.modules", {"uvicorn": SimpleNamespace(run=run)}):
+            with patch.object(transformers_server, "create_app") as create:
+                transformers_server.main([
+                    "--model-path", "weights", "--served-model-name", "local",
+                    "--host", "0.0.0.0", "--port", "8000", "--api-key", "secret",
+                    "--device", "cuda", "--dtype", "float16", "--batch-size", "4",
+                    "--multimodal",
+                ])
+        create.assert_called_once_with(
+            "weights", served_model_name="local", api_key="secret", device="cuda",
+            dtype="float16", batch_size=4, multimodal=True,
         )
         run.assert_called_once_with(create.return_value, host="0.0.0.0", port=8000)
 

@@ -10,6 +10,7 @@
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue?style=flat-square)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green?style=flat-square)](LICENSE)
 [![Jev API](https://img.shields.io/badge/API-%2Fv1%2Fsystemone%20compatible-orange?style=flat-square)](docs/usage.md)
+[![Backend](https://img.shields.io/badge/Backend-SGLang/MLX/Transformers-yellow?style=flat-square)](docs/usage.md)
 
 [简体中文](README_zh.md)
 
@@ -22,26 +23,27 @@
 
 ## 📰 News
 
-- **September 22** - **[MLX on Apple Silicon](docs/mlx.md):** added text and image scoring, candidate batching, bounded prefix reuse, and a compatible System One HTTP service.
+- **September 23** - **[MLX backend](docs/usage.md#offline-python-api):** added text and image scoring, candidate batching, bounded prefix reuse, and a compatible System One HTTP service.
 
 - **September 22** - **[Multimodal inputs](docs/multimodal.md):** added text-and-image requests for SGLang, Transformers, and the System One HTTP API.
 - **September 21** - **[Web and Snake demos](#demos):** added interactive examples for composing mixed questions and model-driven decisions.
 - **September 21** - **Prefix reuse on cold requests:** added staged candidate submission for reusing SGLang's Radix Cache, with [architecture](docs/request-to-model.md), [usage](docs/shared-prefix-cache.md), and [benchmark](docs/shared-prefix-benchmarks.md) documentation.
-- **September 20** - **SGLang and System One API:** added the SGLang scoring backend and a compatible [`POST /v1/systemone`](docs/usage.md#system-one-http-api) endpoint.
+- **September 20** - **SGLang and System One API:** added the SGLang scoring backend and a compatible [`POST /v1/systemone`](docs/usage.md#online-http-service) endpoint.
 
 ## ✨ Key Features
 
+- **Broad backend support:** run local text and vision language models with SGLang, Transformers, or MLX on Apple Silicon through the Python API or HTTP service.
 - **Prefill only:** compute probabilities from logits during prefill and assemble results directly, without token-by-token decoding.
-- **Apple Silicon:** run local text and image models through the [MLX backend](docs/mlx.md), with quantized models, batching, prefix reuse and HTTP serving.
+- **Apple Silicon:** run local text and image models through the [MLX backend](docs/usage.md#offline-python-api), with quantized models, batching, prefix reuse and HTTP serving.
 - **Multimodal inputs:** combine text and images in `state` or `instructions`, with support for SGLang, Transformers and MLX-VLM.
 - **Order-independent options:** evaluate each Choice candidate independently, so reordering options does not introduce a positional preference or change their scores.
 - **Prefix reuse on cold requests:** stage candidate submissions to reuse SGLang's Radix Cache within a single request, including a first request with no relevant cached prefix.
 
-Candidates share `state`, and candidates for the same question also share its `instructions`. The SGLang backend first scores a real `criteria` candidate to establish the prefix cache, then submits candidates that can reuse it. Each candidate is scored once, reducing repeated computation for long inputs with many candidates.
+Candidates share `state`, and candidates for the same question also share its `instructions`. The SGLang backend first scores a real `criteria` candidate to establish the prefix cache, then submits candidates that can reuse it. Each candidate is scored once, reducing repeated computation for long inputs with many candidates. The MLX backend explicitly prefills shared prefixes before scoring candidate suffixes.
 
 ![Staged candidate scoring reuses state and question instructions through SGLang Radix Cache.](assets/shared-prefix-stages.svg)
 
-MLX explicitly prefills shared prefixes before scoring candidate suffixes; both backends preserve the same binary scoring interface. See the [MLX guide](docs/mlx.md) for its batching and model support.
+Both backends preserve the same binary scoring interface. See the [Usage guide](docs/usage.md) for details.
 
 Learn how it works: [From Jev Request to LLM Request](docs/request-to-model.md) → [Shared-prefix design](docs/shared-prefix-cache.md).
 
@@ -60,22 +62,7 @@ python examples/sglang_inference.py --model-path /path/to/model
 The example submits Choice, Score, and Noul questions and prints the response as JSON.
 Replace `/path/to/model` with a local Hugging Face-compatible causal language model directory.
 
-On macOS with Apple Silicon, use a local MLX-LM-compatible text model:
-
-```bash
-uv sync --extra mlx
-uv run --extra mlx python examples/mlx_inference.py --model-path /path/to/mlx-model
-```
-
-To serve the same HTTP API on Apple Silicon:
-
-```bash
-uv run --extra mlx --extra server llm2jev-serve \
-  --backend mlx --model-path /path/to/mlx-model --served-model-name local-model
-```
-
-For images, use `--extra mlx-vlm --extra server`, a compatible vision-language model,
-and `--multimodal`. See [Multimodal inputs](docs/multimodal.md).
+For image serving, see [Multimodal inputs](docs/multimodal.md).
 
 ## 📦 Installation
 
@@ -85,11 +72,10 @@ See [Installation](docs/installation.md) for environment requirements, SGLang, T
 
 See the [Usage guide](docs/usage.md) for complete examples:
 
-- [SGLang Python API](docs/usage.md#sglang-python-api)
-- [Transformers backend](docs/usage.md#transformers-backend)
-- [MLX backend for Apple Silicon](docs/mlx.md)
-- [System One HTTP API](docs/usage.md#system-one-http-api)
-- [Choosing between `staged` and `all`](docs/usage.md#choosing-a-mode)
+- [Offline: Python API](docs/usage.md#offline-python-api)
+- [MLX backend on Apple Silicon](docs/usage.md#offline-python-api)
+- [Online: HTTP service](docs/usage.md#online-http-service)
+- [Choosing between `staged` and `all`](docs/usage.md#choosing-between-staged-and-all)
 - [Multimodal inputs](docs/multimodal.md)
 
 <a id="demos"></a>

@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from llm2jev import BinaryBackendOutput, JevRequest, Noul, Usage
-from llm2jev.mlx_server import _ModelWorker, create_app
+from llm2jev.server.mlx_server import _ModelWorker, create_app
 
 
 _HAS_SERVER = all(importlib.util.find_spec(name) is not None for name in ("fastapi", "httpx"))
