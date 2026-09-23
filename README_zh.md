@@ -26,7 +26,8 @@
 
 ## 📰 最新动态
 
-- **9月23日** - **[MuJoCo 机械臂抓取放置 demo](demos/pick_place/README.md)**：新增由 LLM2Jev 逐步决策控制仿真 Panda 机械臂的演示。
+- **9月22日** - **[Apple Silicon MLX 后端](docs/mlx_zh.md)**：新增图文评分、候选批量执行、有界前缀缓存和兼容的 System One HTTP 服务。
+
 - **9月22日** - **[多模态输入](docs/multimodal_zh.md)**：SGLang、Transformers 和 System One HTTP API 均支持图文请求。
 - **9月21日** - **[网页和贪吃蛇 demo](#demos)**：新增用于组合多种问题和模型决策的交互式示例。
 - **9月21日** - **冷启动前缀复用**：新增分阶段候选提交以复用 SGLang Radix Cache，并提供[架构说明](docs/request-to-model_zh.md)、[使用文档](docs/shared-prefix-cache_zh.md)和[性能测评](docs/shared-prefix-benchmarks_zh.md)。
@@ -37,13 +38,16 @@
 ## ✨ 核心特性
 
 - **仅需 prefill**：在 prefill 阶段读取 logits 计算概率并直接组装结果，无需逐 token 解码。
-- **多模态输入**：支持在 `state` 或 `instructions` 中组合文字与图片，可使用 SGLang 或 Transformers 后端。
+- **Apple Silicon**：通过 [MLX 后端](docs/mlx_zh.md)运行本地图文模型，支持量化模型、批量评分、前缀复用和 HTTP 服务。
+- **多模态输入**：支持在 `state` 或 `instructions` 中组合文字与图片，可使用 SGLang、Transformers 或 MLX-VLM 后端。
 - **选项顺序无关**：每个 Choice 候选都会独立评估，调整选项顺序不会引入位置偏好或改变各选项的分数。
 - **冷启动前缀复用**：通过分阶段提交，在单次请求内复用 SGLang 的 Radix Cache，首次请求没有相关历史缓存时也能利用共享前缀。
 
-所有候选共享 `state`，同一道题的候选还共享 `instructions`。LLM2Jev 先评分一个真实的 `criteria` 候选来建立前缀缓存，再提交能够复用它的其他候选。每个候选只评分一次，减少长输入、多候选场景中的重复计算。
+所有候选共享 `state`，同一道题的候选还共享 `instructions`。SGLang 后端先评分一个真实的 `criteria` 候选来建立前缀缓存，再提交能够复用它的其他候选。每个候选只评分一次，减少长输入、多候选场景中的重复计算。
 
 ![候选分阶段评分，通过 SGLang Radix Cache 复用 state 和题目的 instructions。](assets/shared-prefix-stages.svg)
+
+MLX 会先显式预热共享前缀，再评分候选后缀；两种后端保持相同的二元评分接口。批量执行与模型支持范围见 [MLX 指南](docs/mlx_zh.md)。
 
 了解工作原理：[从 Jev Request 到 LLM Request](docs/request-to-model_zh.md) → [共享前缀设计](docs/shared-prefix-cache_zh.md)。
 
@@ -63,10 +67,27 @@ python examples/sglang_inference.py --model-path /path/to/model
 示例会提交 Choice、Score 和 Noul 三种问题，并将响应输出为 JSON。
 请将 `/path/to/model` 替换为本地 Hugging Face 兼容的因果语言模型目录。
 
+在 Apple Silicon 的 macOS 环境中，使用本地 MLX-LM 兼容的文本模型：
+
+```bash
+uv sync --extra mlx
+uv run --extra mlx python examples/mlx_inference.py --model-path /path/to/mlx-model
+```
+
+
+在 Apple Silicon 上启动相同的 HTTP API：
+
+```bash
+uv run --extra mlx --extra server llm2jev-serve \
+  --backend mlx --model-path /path/to/mlx-model --served-model-name local-model
+```
+
+图片服务使用 `--extra mlx-vlm --extra server`、兼容的视觉语言模型和 `--multimodal`，
+详见[多模态输入](docs/multimodal_zh.md)。
 
 ## 📦 安装
 
-环境要求、SGLang 与 Transformers 依赖，以及 uv、pip 安装方式见[安装指南](docs/installation_zh.md)。
+环境要求、SGLang、Transformers 与 MLX 依赖，以及 uv、pip 安装方式见[安装指南](docs/installation_zh.md)。
 
 ## 📖 使用入门
 
@@ -74,6 +95,7 @@ python examples/sglang_inference.py --model-path /path/to/model
 
 - [SGLang Python API](docs/usage_zh.md#sglang-python-api)
 - [Transformers 后端](docs/usage_zh.md#transformers-后端)
+- [Apple Silicon 的 MLX 后端](docs/mlx_zh.md)
 - [System One HTTP API](docs/usage_zh.md#system-one-http-api)
 - [`staged` 与 `all` 的选择](docs/usage_zh.md#哪种方式更适合我的请求)
 - [多模态输入](docs/multimodal_zh.md)

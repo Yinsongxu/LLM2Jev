@@ -131,7 +131,7 @@ class ImageBackendTests(unittest.TestCase):
             self.skipTest("Pillow is optional")
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        self.path = str(Path(directory.name) / "red.png")
+        self.path = str((Path(directory.name) / "red.png").resolve())
         Image.new("RGB", (8, 8), "red").save(self.path)
         self.processor = Mock()
         self.processor.apply_chat_template.side_effect = lambda messages, **kwargs: "".join(

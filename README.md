@@ -22,7 +22,8 @@
 
 ## 📰 News
 
-- **September 23** - **[MuJoCo pick-and-place demo](demos/pick_place/README.md):** added LLM2Jev control of a simulated Panda arm with per-step decision.
+- **September 22** - **[MLX on Apple Silicon](docs/mlx.md):** added text and image scoring, candidate batching, bounded prefix reuse, and a compatible System One HTTP service.
+
 - **September 22** - **[Multimodal inputs](docs/multimodal.md):** added text-and-image requests for SGLang, Transformers, and the System One HTTP API.
 - **September 21** - **[Web and Snake demos](#demos):** added interactive examples for composing mixed questions and model-driven decisions.
 - **September 21** - **Prefix reuse on cold requests:** added staged candidate submission for reusing SGLang's Radix Cache, with [architecture](docs/request-to-model.md), [usage](docs/shared-prefix-cache.md), and [benchmark](docs/shared-prefix-benchmarks.md) documentation.
@@ -31,13 +32,16 @@
 ## ✨ Key Features
 
 - **Prefill only:** compute probabilities from logits during prefill and assemble results directly, without token-by-token decoding.
-- **Multimodal inputs:** combine text and images in `state` or `instructions`, with support for both SGLang and Transformers.
+- **Apple Silicon:** run local text and image models through the [MLX backend](docs/mlx.md), with quantized models, batching, prefix reuse and HTTP serving.
+- **Multimodal inputs:** combine text and images in `state` or `instructions`, with support for SGLang, Transformers and MLX-VLM.
 - **Order-independent options:** evaluate each Choice candidate independently, so reordering options does not introduce a positional preference or change their scores.
 - **Prefix reuse on cold requests:** stage candidate submissions to reuse SGLang's Radix Cache within a single request, including a first request with no relevant cached prefix.
 
-Candidates share `state`, and candidates for the same question also share its `instructions`. LLM2Jev first scores a real `criteria` candidate to establish the prefix cache, then submits candidates that can reuse it. Each candidate is scored once, reducing repeated computation for long inputs with many candidates.
+Candidates share `state`, and candidates for the same question also share its `instructions`. The SGLang backend first scores a real `criteria` candidate to establish the prefix cache, then submits candidates that can reuse it. Each candidate is scored once, reducing repeated computation for long inputs with many candidates.
 
 ![Staged candidate scoring reuses state and question instructions through SGLang Radix Cache.](assets/shared-prefix-stages.svg)
+
+MLX explicitly prefills shared prefixes before scoring candidate suffixes; both backends preserve the same binary scoring interface. See the [MLX guide](docs/mlx.md) for its batching and model support.
 
 Learn how it works: [From Jev Request to LLM Request](docs/request-to-model.md) → [Shared-prefix design](docs/shared-prefix-cache.md).
 
@@ -56,9 +60,26 @@ python examples/sglang_inference.py --model-path /path/to/model
 The example submits Choice, Score, and Noul questions and prints the response as JSON.
 Replace `/path/to/model` with a local Hugging Face-compatible causal language model directory.
 
+On macOS with Apple Silicon, use a local MLX-LM-compatible text model:
+
+```bash
+uv sync --extra mlx
+uv run --extra mlx python examples/mlx_inference.py --model-path /path/to/mlx-model
+```
+
+To serve the same HTTP API on Apple Silicon:
+
+```bash
+uv run --extra mlx --extra server llm2jev-serve \
+  --backend mlx --model-path /path/to/mlx-model --served-model-name local-model
+```
+
+For images, use `--extra mlx-vlm --extra server`, a compatible vision-language model,
+and `--multimodal`. See [Multimodal inputs](docs/multimodal.md).
+
 ## 📦 Installation
 
-See [Installation](docs/installation.md) for environment requirements, SGLang and Transformers dependencies, and uv or pip installation.
+See [Installation](docs/installation.md) for environment requirements, SGLang, Transformers, and MLX dependencies, and uv or pip installation.
 
 ## 📖 Getting Started
 
@@ -66,6 +87,7 @@ See the [Usage guide](docs/usage.md) for complete examples:
 
 - [SGLang Python API](docs/usage.md#sglang-python-api)
 - [Transformers backend](docs/usage.md#transformers-backend)
+- [MLX backend for Apple Silicon](docs/mlx.md)
 - [System One HTTP API](docs/usage.md#system-one-http-api)
 - [Choosing between `staged` and `all`](docs/usage.md#choosing-a-mode)
 - [Multimodal inputs](docs/multimodal.md)

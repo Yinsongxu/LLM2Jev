@@ -33,7 +33,7 @@ Use an object marked with `type: "multimodal"` in `state` or `instructions`:
 
 Keep the outer marker object. Passing the `content` list directly as `state` or `instructions` serializes it as ordinary JSON text and does not load images. Plain strings, unmarked JSON objects and arrays retain their existing behavior. Images are not interpreted in `criteria`.
 
-The following example places an image in `state` so multiple questions can use it. Both backend examples below use the `model_path` and `request` defined here:
+The following example places an image in `state` so multiple questions can use it. The backend examples below use the `model_path` and `request` defined here:
 
 ```python
 from llm2jev import Choice, JevRequest, Noul
@@ -95,9 +95,50 @@ response = LLM2Jev(backend=backend).evaluate(request)
 print(response.json)
 ```
 
+## MLX backend
+
+On Apple Silicon macOS, install the `mlx-vlm` extra and load a local MLX-VLM-compatible
+causal model with `multimodal=True`:
+
+```python
+from llm2jev import LLM2Jev, MLXBackend
+
+with MLXBackend(model_path, multimodal=True, batch_size=8) as backend:
+    response = LLM2Jev(backend=backend).evaluate(request)
+    print(response.json)
+```
+
+The repository example works with the same image sources and both placements:
+
+```bash
+uv run --extra mlx-vlm python examples/multimodal_inference.py \
+  --backend mlx --model-path /path/to/mlx-vlm \
+  --image /path/to/photo.png --placement state
+```
+
+Qwen2-VL and Qwen2.5-VL support image feature reuse within a request, shared prefix
+caching with image content digests, chunked prefill and equal-length candidate
+batches. Other causal VLMs use complete per-prompt prefills. A changed image cannot
+reuse cached KV state for the previous image solely because its path or placeholder
+tokens match. The legacy MLX-VLM `BaseImageProcessor` path supports only one image
+per prompt and rejects multiple images; other processors follow the model's image
+capacity. See [MLX model support](mlx.md#images-and-model-support) for details.
+
 ## HTTP API calls
 
-Start a multimodal model service following the [Usage guide](usage.md#system-one-http-api), then submit a request with the same structure to `POST /v1/systemone`.
+Start SGLang following the [Usage guide](usage.md#system-one-http-api), or start
+MLX-VLM on Apple Silicon:
+
+```bash
+uv run --extra mlx-vlm --extra server llm2jev-serve \
+  --backend mlx --multimodal --model-path /path/to/mlx-vlm \
+  --served-model-name local-vlm --port 30000
+```
+
+Both services accept the same request structure at `POST /v1/systemone`.
+MLX reads `LLM2JEV_API_KEY` when configured; clients then send the Bearer header
+shown below. Omit the header when authentication is disabled. Local paths and
+`file://` URIs resolve on the machine running the model service.
 
 ```bash
 curl http://localhost:30000/v1/systemone \

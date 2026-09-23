@@ -2,7 +2,7 @@
 
 [English](usage.md) · [返回 README](../README_zh.md)
 
-本页介绍本地 Python 调用、HTTP 服务和候选提交模式。请先完成[安装](installation_zh.md)。示例使用本地 Hugging Face 兼容的因果语言模型，请将 `/path/to/model` 替换为实际模型目录。
+本页介绍本地 Python 调用、HTTP 服务和候选提交模式。请先完成[安装](installation_zh.md)。SGLang 和 Transformers 示例使用本地 Hugging Face 兼容的因果语言模型，请将 `/path/to/model` 替换为实际模型目录。MLX 使用本地 MLX-LM 文本模型或 MLX-VLM 图片模型。
 
 ## SGLang Python API
 
@@ -77,10 +77,42 @@ print(response.to_dict())
 
 Transformers 后端会优先使用 CUDA；没有可用 GPU 时自动回退到 CPU。
 
+## MLX 后端
+
+在 Apple Silicon 的 macOS 环境中，使用 `mlx` extra 运行文本示例：
+
+```bash
+uv run --extra mlx python examples/mlx_inference.py \
+  --model-path /path/to/mlx-model --batch-size 8 --submission staged
+```
+
+`MLXBackend` 使用同样的请求对象：
+
+```python
+from llm2jev import LLM2Jev, MLXBackend
+
+with MLXBackend("/path/to/mlx-model", batch_size=8, submission="staged") as backend:
+    response = LLM2Jev(backend=backend).evaluate(request)
+    print(response.to_dict())
+```
+
+MLX 通过既有转换流程支持 Choice、Score 和 Noul。模型缓存能力允许时，文本候选会实际
+组成变长 batch，并复用前缀快照；不支持的缓存类型按逐条方式评分。
+`staged` 先显式预热共享前缀，`all` 省略预热但仍可命中已有缓存；两者均保持候选顺序和
+逻辑输入 token 统计口径。缓存默认最多 32 条、512 MiB tensor；
+`max_cache_entries=0` 或 `max_cache_bytes=0` 会禁用可复用缓存存储。
+
+图片模型安装 `mlx-vlm`，并使用 `MLXBackend(..., multimodal=True)`。
+Qwen2-VL 与 Qwen2.5-VL 支持图片特征复用、前缀缓存和等长批量评分；
+其他因果 VLM 按 prompt 执行完整 prefill。在同一个 `with` 块中复用后端处理多个请求。
+`clear_cache()` 清空可复用缓存，`close()` 或退出上下文会释放模型。
+完整配置与模型支持范围见 [MLX 指南](mlx_zh.md)，图片示例见[多模态输入](multimodal_zh.md)。
+
 ## System One HTTP API
 
-`llm2jev-serve` 在 SGLang 原生 HTTP 服务上增加 `POST /v1/systemone`。
-模型列表、健康检查、鉴权和其他端点仍由 SGLang 提供。
+`llm2jev-serve` 默认使用 SGLang 并保留其原生启动参数；`--backend mlx` 选择 Apple Silicon 服务。
+两者提供相同请求与响应格式的 `POST /v1/systemone`，以及 `/v1/models`、`/health`。
+使用 SGLang 时，其其他原生端点仍然可用。启动 SGLang：
 
 ```bash
 export LLM2JEV_API_KEY="replace-with-your-api-key"
@@ -92,7 +124,23 @@ llm2jev-serve \
   --api-key "$LLM2JEV_API_KEY"
 ```
 
-查看 SGLang 原生模型列表：
+也可使用相同模型别名启动 MLX：
+
+```bash
+uv run --extra mlx --extra server llm2jev-serve \
+  --backend mlx --model-path /path/to/mlx-model \
+  --served-model-name local-model --host 127.0.0.1 --port 30000 \
+  --batch-size 8 --submission staged --cache-size 32 --cache-bytes 536870912
+```
+
+MLX 默认读取 `LLM2JEV_API_KEY`，也可通过 `--api-key` 覆盖；配置后 `/v1` 接口需要
+Bearer token，`/health` 保持公开，供就绪检查使用。
+MLX 图片模型改用 `--extra mlx-vlm --extra server`，并加上 `--multimodal`。
+请求的 `model` 必须与服务别名完全一致，MLX 未指定别名时使用传入的模型路径。
+未知模型返回 404，无效请求返回 422。MLX 使用一个专属线程执行推理，并发请求排队，
+事件循环保持响应。详见 [MLX HTTP 服务](mlx_zh.md#http-服务)。
+
+查看任一服务的模型列表：
 
 ```bash
 curl http://localhost:30000/v1/models \
@@ -119,13 +167,16 @@ curl http://localhost:30000/v1/systemone \
 
 通过 `--submission staged|all` 选择 `/v1/systemone` 的候选提交方式，默认 `staged`。
 启动时选择的模式对该服务的所有 `/v1/systemone` 请求生效。
-Jev 请求体及 SGLang 其他原生接口不变。`staged` 依赖 Radix Cache；使用
+Jev 请求体保持一致。SGLang 的 `staged` 依赖 Radix Cache；使用
 `--disable-radix-cache` 时需选择 `all`。模式选择建议见[下文](#哪种方式更适合我的请求)。
 
-服务也复用 SGLang 的启动参数，目前要求使用默认的单 tokenizer HTTP 模式，
+使用默认的 `--backend sglang` 时，服务复用 SGLang 的启动参数，目前要求使用默认的单 tokenizer HTTP 模式，
 且不能启用 `--skip-tokenizer-init`。
 
 ## 哪种方式更适合我的请求？
+
+下表描述 SGLang 的模式选择。MLX 同样提供 `staged` 与 `all`，但采用显式前缀预热，
+具体语义见 [MLX 批量评分与共享前缀](mlx_zh.md#批量评分与共享前缀)。
 
 | 请求特点 | 建议起点 | 原因 |
 | --- | --- | --- |

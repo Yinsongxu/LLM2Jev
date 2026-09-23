@@ -14,6 +14,7 @@ from .inference import (
 from .backend import (
     BinaryBackend,
     BinaryBackendOutput,
+    MLXBackend,
     SGLangBackend,
     TransformersBackend,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "JevRequest",
     "JevResponse",
     "LLM2Jev",
+    "MLXBackend",
     "Noul",
     "NoulAnswer",
     "Normalizer",

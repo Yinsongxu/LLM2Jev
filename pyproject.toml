@@ -12,9 +12,20 @@ dependencies = [
 ]
 
 [project.scripts]
-llm2jev-serve = "llm2jev.sglang_server:main"
+llm2jev-serve = "llm2jev.server:main"
 
 [project.optional-dependencies]
+mlx = [
+    "mlx-lm>=0.31.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+mlx-vlm = [
+    "mlx-lm>=0.31.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "mlx-vlm>=0.7.2; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+server = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
 transformers = [
     "torch>=2.0",
     "transformers>=4.51",
