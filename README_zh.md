@@ -92,7 +92,7 @@ python examples/sglang_inference.py --model-path /path/to/model
     <td align="center"><a href="demos/snake.py"><strong>贪吃蛇 demo</strong></a></td>
   </tr>
   <tr>
-    <td align="center" valign="middle"><video src="assets/mujoco.mp4" controls width="100%"></video><br><a href="demos/pick_place/README.md"><strong>MuJoCo 机械臂抓取放置 demo</strong></a></td>
+    <td align="center" valign="middle"><img src="assets/mujoco.gif" alt="MuJoCo 机械臂抓取放置 demo" width="100%"><br><a href="demos/pick_place/README.md"><strong>MuJoCo 机械臂抓取放置 demo</strong></a></td>
     <td></td>
   </tr>
 </table>
