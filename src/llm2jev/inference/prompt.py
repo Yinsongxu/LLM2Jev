@@ -76,6 +76,14 @@ class DefaultPromptRenderer:
     def _score_under_evaluation(question: BinaryQuestion) -> str:
         return serialize_content(question.condition) if question.condition is not None else str(question.candidate)
 
+    @staticmethod
+    def _noul_candidates(question: BinaryQuestion) -> str:
+        candidates = question.noul_candidates or (question.condition,)
+        return "All candidates:\n" + "\n".join(
+            f"- {serialize_content(candidate)}" for candidate in candidates
+            if candidate is not None
+        )
+
     def render(self, question: BinaryQuestion) -> ChatPrompt:
         if is_multimodal(question.context) or is_multimodal(question.objective):
             return self._render_multimodal(question)
@@ -84,9 +92,19 @@ class DefaultPromptRenderer:
             if question.objective is not None
             else "Evaluate the candidate."
         )
-        if question.question_type == "noul":
+        if question.question_type == "noul" and question.noul_has_criteria and question.condition is not None:
+            text = (
+                f"{objective}\n"
+                f"{self._noul_candidates(question)}\n"
+                f'Is this candidate "{serialize_content(question.condition)}" the best answer?'
+            )
+        elif question.question_type == "noul" and (
+            question.noul_has_criteria or question.condition is not None
+        ):
             answer = "yes" if question.candidate == "true" else "no"
             text = f"{objective}\nCandidate answer: {answer}"
+        elif question.question_type == "noul":
+            text = objective
         elif question.question_type == "choice":
             text = (
                 f"{objective}\n"
@@ -99,7 +117,11 @@ class DefaultPromptRenderer:
                 f"{self._score_scale(question)}\n"
                 f'Is rating "{self._score_under_evaluation(question)}" the most appropriate rating?'
             )
-        if question.question_type == "noul" and question.condition is not None:
+        if (
+            question.question_type == "noul"
+            and not question.noul_has_criteria
+            and question.condition is not None
+        ):
             text += f"\nCandidate definition: {serialize_content(question.condition)}"
 
         return (
@@ -127,12 +149,22 @@ class DefaultPromptRenderer:
         append_content("Context:\n", question.context)
         append_content(
             ("\n\nQuestion:\n" if question.question_type in {"choice", "score"}
+             or (question.question_type == "noul" and question.noul_has_criteria)
              else "\n\nQuestion:\nEvaluation objective: "),
             question.objective if question.objective is not None else "Evaluate the candidate.",
         )
-        if question.question_type == "noul":
+        if question.question_type == "noul" and question.noul_has_criteria and question.condition is not None:
+            text = (
+                f"\n{self._noul_candidates(question)}\n"
+                f'Is this candidate "{serialize_content(question.condition)}" the best answer?'
+            )
+        elif question.question_type == "noul" and (
+            question.noul_has_criteria or question.condition is not None
+        ):
             answer = "yes" if question.candidate == "true" else "no"
             text = f"\nCandidate answer: {answer}"
+        elif question.question_type == "noul":
+            text = ""
         elif question.question_type == "choice":
             text = (
                 f"\n{self._choice_candidates(question)}\n"
@@ -143,7 +175,11 @@ class DefaultPromptRenderer:
                 f"\n{self._score_scale(question)}\n"
                 f'Is rating "{self._score_under_evaluation(question)}" the most appropriate rating?'
             )
-        if question.question_type == "noul" and question.condition is not None:
+        if (
+            question.question_type == "noul"
+            and not question.noul_has_criteria
+            and question.condition is not None
+        ):
             text += f"\nCandidate definition: {serialize_content(question.condition)}"
         parts.append({"type": "text", "text": text})
         return (

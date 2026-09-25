@@ -70,8 +70,7 @@ Is this candidate "billing: Charges and payment problems" the best answer?""",
         self.assertNotIn("Candidate definition:", user_message)
         self.assertEqual(
             user_message,
-            "Context:\nPlease refund me.\n\nQuestion:\nEvaluate the candidate."
-            "\nCandidate answer: yes",
+            "Context:\nPlease refund me.\n\nQuestion:\nEvaluate the candidate.",
         )
 
     def test_renders_choice_without_descriptions(self) -> None:
@@ -99,14 +98,20 @@ Is this candidate "billing: Charges and payment problems" the best answer?""",
             context="Only a replacement is requested.",
             objective="Does the customer request a refund?",
             condition="The customer does not want a refund.",
+            noul_has_criteria=True,
+            noul_candidates=("A refund is requested", "The customer does not want a refund."),
         )
 
         user_message = self.renderer.render(question)[1]["content"]
 
         self.assertNotIn("Is the answer to the following question no?", user_message)
         self.assertIn("Does the customer request a refund?", user_message)
-        self.assertIn("Candidate answer: no", user_message)
-        self.assertIn("Candidate definition: The customer does not want a refund.", user_message)
+        self.assertIn(
+            "All candidates:\n- A refund is requested\n"
+            "- The customer does not want a refund.\n"
+            'Is this candidate "The customer does not want a refund." the best answer?',
+            user_message,
+        )
 
     def test_distinguishes_numeric_score_candidate(self) -> None:
         question = BinaryQuestion(

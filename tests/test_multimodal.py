@@ -104,8 +104,9 @@ class MultimodalContentTests(unittest.TestCase):
             self.assertEqual(parts[0][:-1], parts[1][:-1])
             self.assertNotIn("above yes?", parts[0][-1]["text"])
             self.assertNotIn("above no?", parts[1][-1]["text"])
-            self.assertIn("Candidate answer: yes", parts[0][-1]["text"])
-            self.assertIn("Candidate answer: no", parts[1][-1]["text"])
+            self.assertIn("All candidates:\n- Red\n- Not red", parts[0][-1]["text"])
+            self.assertIn('Is this candidate "Red" the best answer?', parts[0][-1]["text"])
+            self.assertIn('Is this candidate "Not red" the best answer?', parts[1][-1]["text"])
             self.assertEqual(sum(p["type"] == "image_url" for p in parts[0]), 1)
 
     def test_interleaved_parts_keep_order_and_do_not_alias_request(self):

@@ -83,7 +83,10 @@ class LLM2JevTests(unittest.TestCase):
         self.assertEqual(model, "test-model")
         self.assertEqual(len(prompts), 7)
         self.assertIn("All candidates:\nbilling\nreturns", prompts[0][1]["content"])
-        self.assertIn("Candidate answer: no", prompts[-1][1]["content"])
+        self.assertIn(
+            'Is this candidate "No refund requested" the best answer?',
+            prompts[-1][1]["content"],
+        )
 
     def test_uses_custom_renderer_and_normalizer(self) -> None:
         class FixedRenderer:

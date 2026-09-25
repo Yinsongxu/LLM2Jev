@@ -26,6 +26,8 @@ class BinaryQuestion:
     condition: JSONContent | None
     choices: tuple[tuple[str, JSONContent | None], ...] | None = None
     score_levels: tuple[JSONContent, ...] | None = None
+    noul_has_criteria: bool = False
+    noul_candidates: tuple[JSONContent | None, ...] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.question_id, str) or not self.question_id:
@@ -59,6 +61,14 @@ class BinaryQuestion:
                 raise ValueError("score_levels are only valid and required for score tasks")
             if any(not is_json_content(level) for level in self.score_levels):
                 raise ValueError("score_levels must contain JSON content")
+        if self.noul_candidates is not None:
+            if self.question_type != "noul" or len(self.noul_candidates) != 2:
+                raise ValueError("noul_candidates must contain true and false descriptions")
+            if any(
+                description is not None and not is_json_content(description)
+                for description in self.noul_candidates
+            ):
+                raise ValueError("noul_candidates must contain JSON descriptions or None")
 
         if self.question_type == "choice" and (
             not isinstance(self.candidate, str) or not self.candidate
@@ -92,6 +102,15 @@ class BinaryQuestion:
                 self,
                 "score_levels",
                 tuple(copy_json_content(level) for level in self.score_levels),
+            )
+        if self.noul_candidates is not None:
+            object.__setattr__(
+                self,
+                "noul_candidates",
+                tuple(
+                    copy_json_content(description) if description is not None else None
+                    for description in self.noul_candidates
+                ),
             )
 
 
@@ -140,6 +159,9 @@ def compile_binary_questions(request: JevRequest) -> tuple[BinaryQuestion, ...]:
                         context=request.state,
                         objective=question.instructions,
                         condition=criteria.get(candidate),
+                        noul_has_criteria=bool(criteria),
+                        noul_candidates=(criteria.get("true"), criteria.get("false"))
+                        if criteria else None,
                     )
                 )
         else:
