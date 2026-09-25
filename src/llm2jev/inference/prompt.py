@@ -47,6 +47,35 @@ def serialize_content(value: JSONContent | Candidate) -> str:
 class DefaultPromptRenderer:
     """Render a binary question as model-independent chat messages."""
 
+    @staticmethod
+    def _choice_candidates(question: BinaryQuestion) -> str:
+        choices = question.choices or ((str(question.candidate), question.condition),)
+        lines = ["All candidates:"]
+        for candidate, description in choices:
+            line = candidate
+            if description is not None:
+                line += f": {serialize_content(description)}"
+            lines.append(line)
+        return "\n".join(lines)
+
+    @staticmethod
+    def _choice_under_evaluation(question: BinaryQuestion) -> str:
+        candidate = serialize_content(question.candidate)
+        if question.condition is not None:
+            candidate += f": {serialize_content(question.condition)}"
+        return candidate
+
+    @staticmethod
+    def _score_scale(question: BinaryQuestion) -> str:
+        levels = question.score_levels or ((question.condition,) if question.condition is not None else ())
+        return "Rating scale, from lower to higher:\n" + "\n".join(
+            f"- {serialize_content(level)}" for level in levels
+        )
+
+    @staticmethod
+    def _score_under_evaluation(question: BinaryQuestion) -> str:
+        return serialize_content(question.condition) if question.condition is not None else str(question.candidate)
+
     def render(self, question: BinaryQuestion) -> ChatPrompt:
         if is_multimodal(question.context) or is_multimodal(question.objective):
             return self._render_multimodal(question)
@@ -55,17 +84,22 @@ class DefaultPromptRenderer:
             if question.objective is not None
             else "Evaluate the candidate."
         )
-        if question.question_type == "noul" and question.candidate == "true":
-            text = objective
-        elif question.question_type == "noul":
-            text = f"Is the answer to the following question no?\n{objective}"
+        if question.question_type == "noul":
+            answer = "yes" if question.candidate == "true" else "no"
+            text = f"{objective}\nCandidate answer: {answer}"
+        elif question.question_type == "choice":
+            text = (
+                f"{objective}\n"
+                f"{self._choice_candidates(question)}\n"
+                f'Is this candidate "{self._choice_under_evaluation(question)}" the best answer?'
+            )
         else:
             text = (
-                f"Evaluation objective: {objective}\n"
-                f"Candidate: {serialize_content(question.candidate)}\n"
-                "Does this candidate match the context?"
+                f"{objective}\n"
+                f"{self._score_scale(question)}\n"
+                f'Is rating "{self._score_under_evaluation(question)}" the most appropriate rating?'
             )
-        if question.condition is not None:
+        if question.question_type == "noul" and question.condition is not None:
             text += f"\nCandidate definition: {serialize_content(question.condition)}"
 
         return (
@@ -92,21 +126,24 @@ class DefaultPromptRenderer:
 
         append_content("Context:\n", question.context)
         append_content(
-            "\n\nQuestion:\nEvaluation objective: ",
+            ("\n\nQuestion:\n" if question.question_type in {"choice", "score"}
+             else "\n\nQuestion:\nEvaluation objective: "),
             question.objective if question.objective is not None else "Evaluate the candidate.",
         )
         if question.question_type == "noul":
+            answer = "yes" if question.candidate == "true" else "no"
+            text = f"\nCandidate answer: {answer}"
+        elif question.question_type == "choice":
             text = (
-                "\nIs the answer to the question above yes?"
-                if question.candidate == "true"
-                else "\nIs the answer to the question above no?"
+                f"\n{self._choice_candidates(question)}\n"
+                f'Is this candidate "{self._choice_under_evaluation(question)}" the best answer?'
             )
         else:
             text = (
-                f"\nCandidate: {serialize_content(question.candidate)}\n"
-                "Does this candidate match the evidence?"
+                f"\n{self._score_scale(question)}\n"
+                f'Is rating "{self._score_under_evaluation(question)}" the most appropriate rating?'
             )
-        if question.condition is not None:
+        if question.question_type == "noul" and question.condition is not None:
             text += f"\nCandidate definition: {serialize_content(question.condition)}"
         parts.append({"type": "text", "text": text})
         return (

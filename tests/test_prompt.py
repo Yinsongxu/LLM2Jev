@@ -32,6 +32,10 @@ class DefaultPromptRendererTests(unittest.TestCase):
             context={"message": "Charged twice", "order": 104},
             objective="Which team should handle this?",
             condition="Charges and payment problems",
+            choices=(
+                ("billing", "Charges and payment problems"),
+                ("technical", "Technical problems"),
+            ),
         )
 
         messages = self.renderer.render(question)
@@ -44,10 +48,11 @@ class DefaultPromptRendererTests(unittest.TestCase):
 {"message":"Charged twice","order":104}
 
 Question:
-Evaluation objective: Which team should handle this?
-Candidate: billing
-Does this candidate match the context?
-Candidate definition: Charges and payment problems""",
+Which team should handle this?
+All candidates:
+billing: Charges and payment problems
+technical: Technical problems
+Is this candidate "billing: Charges and payment problems" the best answer?""",
         )
 
     def test_omits_optional_sections(self) -> None:
@@ -63,7 +68,30 @@ Candidate definition: Charges and payment problems""",
         user_message = self.renderer.render(question)[1]["content"]
 
         self.assertNotIn("Candidate definition:", user_message)
-        self.assertEqual(user_message, "Context:\nPlease refund me.\n\nQuestion:\nEvaluate the candidate.")
+        self.assertEqual(
+            user_message,
+            "Context:\nPlease refund me.\n\nQuestion:\nEvaluate the candidate."
+            "\nCandidate answer: yes",
+        )
+
+    def test_renders_choice_without_descriptions(self) -> None:
+        question = BinaryQuestion(
+            question_id="department",
+            question_type="choice",
+            candidate="billing",
+            context="Charged twice",
+            objective="Which team should handle this?",
+            condition=None,
+            choices=(("billing", None), ("technical", None), ("account", None)),
+        )
+
+        user_message = self.renderer.render(question)[1]["content"]
+
+        self.assertIn(
+            "All candidates:\nbilling\ntechnical\naccount\n"
+            "Is this candidate \"billing\" the best answer?",
+            user_message,
+        )
 
     def test_false_noul_asks_for_negative_answer_and_preserves_definition(self) -> None:
         question = BinaryQuestion(
@@ -75,10 +103,9 @@ Candidate definition: Charges and payment problems""",
 
         user_message = self.renderer.render(question)[1]["content"]
 
-        self.assertIn(
-            "Is the answer to the following question no?\nDoes the customer request a refund?",
-            user_message,
-        )
+        self.assertNotIn("Is the answer to the following question no?", user_message)
+        self.assertIn("Does the customer request a refund?", user_message)
+        self.assertIn("Candidate answer: no", user_message)
         self.assertIn("Candidate definition: The customer does not want a refund.", user_message)
 
     def test_distinguishes_numeric_score_candidate(self) -> None:
@@ -89,12 +116,16 @@ Candidate definition: Charges and payment problems""",
             context=["Export failed", {"browser": "Chrome"}],
             objective="Rate severity",
             condition={"level": "Blocking"},
+            score_levels=("Low", "Medium", {"level": "Blocking"}),
         )
 
         user_message = self.renderer.render(question)[1]["content"]
 
-        self.assertIn("Candidate: 2\n", user_message)
-        self.assertIn('{"level":"Blocking"}', user_message)
+        self.assertIn(
+            "Rating scale, from lower to higher:\n- Low\n- Medium\n- {\"level\":\"Blocking\"}\n"
+            'Is rating "{\"level\":\"Blocking\"}" the most appropriate rating?',
+            user_message,
+        )
 
     def test_marks_context_as_untrusted_data(self) -> None:
         question = BinaryQuestion(

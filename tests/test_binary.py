@@ -184,6 +184,23 @@ class CompileBinaryQuestionsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             compile_binary_questions(request)
 
+    def test_compiles_choice_with_all_candidates_on_each_task(self) -> None:
+        request = JevRequest(
+            state="Charged twice",
+            model="jev-latest",
+            questions={"department": Choice(criteria={"billing": "Payments", "technical": None})},
+        )
+
+        tasks = compile_binary_questions(request)
+
+        self.assertEqual(
+            [task.choices for task in tasks],
+            [
+                (("billing", "Payments"), ("technical", None)),
+                (("billing", "Payments"), ("technical", None)),
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

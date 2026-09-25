@@ -24,6 +24,8 @@ class BinaryQuestion:
     context: State
     objective: JSONContent | None
     condition: JSONContent | None
+    choices: tuple[tuple[str, JSONContent | None], ...] | None = None
+    score_levels: tuple[JSONContent, ...] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.question_id, str) or not self.question_id:
@@ -40,6 +42,23 @@ class BinaryQuestion:
         ):
             if value is not None and not is_json_content(value):
                 raise ValueError(f"{field} must be JSON content or None")
+
+        if self.choices is not None:
+            if self.question_type != "choice" or not self.choices:
+                raise ValueError("choices are only valid and required for choice tasks")
+            if any(
+                not isinstance(name, str) or not name
+                or (description is not None and not is_json_content(description))
+                for name, description in self.choices
+            ):
+                raise ValueError("choices must contain non-empty names and JSON descriptions")
+            if self.candidate not in {name for name, _ in self.choices}:
+                raise ValueError("choice candidate must be present in choices")
+        if self.score_levels is not None:
+            if self.question_type != "score" or not self.score_levels:
+                raise ValueError("score_levels are only valid and required for score tasks")
+            if any(not is_json_content(level) for level in self.score_levels):
+                raise ValueError("score_levels must contain JSON content")
 
         if self.question_type == "choice" and (
             not isinstance(self.candidate, str) or not self.candidate
@@ -59,6 +78,21 @@ class BinaryQuestion:
             object.__setattr__(self, "objective", copy_json_content(self.objective))
         if self.condition is not None:
             object.__setattr__(self, "condition", copy_json_content(self.condition))
+        if self.choices is not None:
+            object.__setattr__(
+                self,
+                "choices",
+                tuple(
+                    (name, copy_json_content(description) if description is not None else None)
+                    for name, description in self.choices
+                ),
+            )
+        if self.score_levels is not None:
+            object.__setattr__(
+                self,
+                "score_levels",
+                tuple(copy_json_content(level) for level in self.score_levels),
+            )
 
 
 def compile_binary_questions(request: JevRequest) -> tuple[BinaryQuestion, ...]:
@@ -78,6 +112,7 @@ def compile_binary_questions(request: JevRequest) -> tuple[BinaryQuestion, ...]:
                         context=request.state,
                         objective=question.instructions,
                         condition=description,
+                        choices=tuple(question.criteria.items()),
                     )
                 )
         elif isinstance(question, Score):
@@ -90,6 +125,7 @@ def compile_binary_questions(request: JevRequest) -> tuple[BinaryQuestion, ...]:
                         context=request.state,
                         objective=question.instructions,
                         condition=description,
+                        score_levels=tuple(question.criteria),
                     )
                 )
         elif isinstance(question, Noul):

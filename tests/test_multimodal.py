@@ -87,7 +87,10 @@ class MultimodalContentTests(unittest.TestCase):
         self.assertEqual(first[2]["image_url"]["url"], "shared.png")
         self.assertIn("question", first[4]["text"])
         self.assertEqual(first[5]["image_url"]["url"], "q.png")
-        self.assertIn("Candidate: a", first[6]["text"])
+        self.assertIn(
+            'Is this candidate "a: first" the best answer?',
+            first[6]["text"],
+        )
         self.assertIn("inside the context or images", prompts[0][0]["content"])
 
     def test_each_placement_and_noul_negative_preserve_image_prefix(self):
@@ -99,8 +102,10 @@ class MultimodalContentTests(unittest.TestCase):
             )
             parts = [DefaultPromptRenderer().render(t)[1]["content"] for t in compile_binary_questions(request)]
             self.assertEqual(parts[0][:-1], parts[1][:-1])
-            self.assertIn("above yes?", parts[0][-1]["text"])
-            self.assertIn("above no?", parts[1][-1]["text"])
+            self.assertNotIn("above yes?", parts[0][-1]["text"])
+            self.assertNotIn("above no?", parts[1][-1]["text"])
+            self.assertIn("Candidate answer: yes", parts[0][-1]["text"])
+            self.assertIn("Candidate answer: no", parts[1][-1]["text"])
             self.assertEqual(sum(p["type"] == "image_url" for p in parts[0]), 1)
 
     def test_interleaved_parts_keep_order_and_do_not_alias_request(self):
