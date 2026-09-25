@@ -6,5 +6,7 @@ build/
 dist/
 models/
 /dev-docs/
-evaluation
+/evaluation/*
+!/evaluation/compare_jevbench_accuracy.py
 runs
+RUN2

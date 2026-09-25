@@ -23,8 +23,8 @@
 
 ## 📰 News
 
+- **September 26** - **[JevBench evaluation](docs/jevbench.md):** LLM2Jev accuracy and latency on 231 public items; P50 latency is below one tenth of the Jev official result.
 - **September 23** - **[MLX backend](docs/usage.md#offline-python-api):** added text and image scoring, candidate batching, bounded prefix reuse, and a compatible System One HTTP service.
-
 - **September 22** - **[Multimodal inputs](docs/multimodal.md):** added text-and-image requests for SGLang, Transformers, and the System One HTTP API.
 - **September 21** - **[Web and Snake demos](#demos):** added interactive examples for composing mixed questions and model-driven decisions.
 - **September 21** - **Prefix reuse on cold requests:** added staged candidate submission for reusing SGLang's Radix Cache, with [architecture](docs/request-to-model.md), [usage](docs/shared-prefix-cache.md), and [benchmark](docs/shared-prefix-benchmarks.md) documentation.
@@ -34,9 +34,7 @@
 
 - **Broad backend support:** run local text and vision language models with SGLang, Transformers, or MLX on Apple Silicon through the Python API or HTTP service.
 - **Prefill only:** compute probabilities from logits during prefill and assemble results directly, without token-by-token decoding.
-- **Apple Silicon:** run local text and image models through the [MLX backend](docs/usage.md#offline-python-api), with quantized models, batching, prefix reuse and HTTP serving.
 - **Multimodal inputs:** combine text and images in `state` or `instructions`, with support for SGLang, Transformers and MLX-VLM.
-- **Order-independent options:** evaluate each Choice candidate independently, so reordering options does not introduce a positional preference or change their scores.
 - **Prefix reuse on cold requests:** stage candidate submissions to reuse SGLang's Radix Cache within a single request, including a first request with no relevant cached prefix.
 
 Candidates share `state`, and candidates for the same question also share its `instructions`. The SGLang backend first scores a real `criteria` candidate to establish the prefix cache, then submits candidates that can reuse it. Each candidate is scored once, reducing repeated computation for long inputs with many candidates. The MLX backend explicitly prefills shared prefixes before scoring candidate suffixes.
@@ -101,6 +99,14 @@ See the [Usage guide](docs/usage.md) for complete examples:
 ## 📊 Benchmarks
 
 See [Performance benchmarks](docs/shared-prefix-benchmarks.md) for the Qwen3-1.7B / RTX 5090 measurements, test conditions, and comparison of `staged` and `all` across cold and warm caches. Gains depend on input length, candidate count, and cache state.
+
+### JevBench public accuracy
+
+This test covers 231 public JevBench items. LLM2Jev with Qwen3.5-4B measured **76.2%** accuracy.
+
+![JevBench public accuracy comparison](assets/jevbench-accuracy.png)
+
+The recorded LLM2Jev latency is **P50 48 ms / P95 346 ms**, while the Jev 1.13.0 values are **P50 652 ms / P95 722 ms**. See the [JevBench report](docs/jevbench.md) for the data and reproduction commands.
 
 ## 🗺️ Roadmap
 

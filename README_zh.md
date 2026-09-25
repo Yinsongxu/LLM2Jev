@@ -26,6 +26,7 @@
 
 ## 📰 最新动态
 
+- **9月26日** - **[JevBench 测评](docs/jevbench.md)**： LLM2Jev 在 231 个公开题目上的准确率和延时，p50延时不到Jev官方的1/10。
 - **9月23日** - **[MLX后端](docs/usage_zh.md#offline-python-api)**：新增图文评分、候选批量执行、有界前缀缓存和兼容的 System One HTTP 服务。
 - **9月22日** - **[多模态输入](docs/multimodal_zh.md)**：SGLang、Transformers 和 System One HTTP API 均支持图文请求。
 - **9月21日** - **[网页和贪吃蛇 demo](#demos)**：新增用于组合多种问题和模型决策的交互式示例。
@@ -38,7 +39,6 @@
 - **丰富的后端支持**：支持 SGLang、Transformers 和 Apple Silicon 上的 MLX，可通过 Python API 或 HTTP 服务运行本地文本及图文模型。
 - **仅需 prefill**：在 prefill 阶段读取 logits 计算概率并直接组装结果，无需逐 token 解码。
 - **多模态输入**：支持在 `state` 或 `instructions` 中组合文字与图片，可使用 SGLang、Transformers 或 MLX-VLM 后端。
-- **选项顺序无关**：每个 Choice 候选都会独立评估，调整选项顺序不会引入位置偏好或改变各选项的分数。
 - **冷启动前缀复用**：通过分阶段提交，在单次请求内复用 SGLang 的 Radix Cache，首次请求没有相关历史缓存时也能利用共享前缀。
 
 所有候选共享 `state`，同一道题的候选还共享 `instructions`。SGLang 后端先评分一个真实的 `criteria` 候选来建立前缀缓存，再提交能够复用它的其他候选。每个候选只评分一次，减少长输入、多候选场景中的重复计算。MLX后端会先显式预热共享前缀，再评分候选后缀。
@@ -102,6 +102,14 @@ python examples/sglang_inference.py --model-path /path/to/model
 ## 📊 性能测评
 
 [性能测评](docs/shared-prefix-benchmarks_zh.md)记录了 Qwen3-1.7B / RTX 5090 的测试条件、实测数据，以及冷缓存和热缓存下 `staged` 与 `all` 的比较。收益取决于输入长度、候选数量和缓存状态。
+
+### JevBench 公开题目准确率
+
+本次测试包含JevBench 中的 231 个公开题目。LLM2Jev 使用 Qwen3.5-4B 测得准确率为 **76.2%**。
+
+![JevBench 公开题目准确率对比](assets/jevbench-accuracy.png)
+
+本次记录的 LLM2Jev 延时为 **P50 48 ms  / P95 346 ms**，Jev 1.13.0 的对应数值为 **P50 652 ms / P95 722 ms**。具体数据和复现命令见 [JevBench 报告](docs/jevbench.md)。
 
 ## 🗺️ 近期规划
 
