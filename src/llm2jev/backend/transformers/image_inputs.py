@@ -3,7 +3,8 @@
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 from ...inference.prompt import ChatPrompt
 from ..tokenization import _apply_chat_template
@@ -61,7 +62,8 @@ def load_transformers_images(sources: Sequence[Sequence[str]]) -> list[list[Any]
         images = []
         for source in row:
             if source.startswith("file://"):
-                source = unquote(urlparse(source).path)
+                parsed = urlparse(source)
+                source = url2pathname(f"//{parsed.netloc}{parsed.path}")
             if source not in loaded:
                 loaded[source] = load_image(source)
             images.append(loaded[source])

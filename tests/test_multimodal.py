@@ -1,5 +1,6 @@
 import base64
 import math
+import nturl2path
 import tempfile
 import unittest
 from pathlib import Path
@@ -186,6 +187,18 @@ class ImageBackendTests(unittest.TestCase):
         loader.assert_any_call(data)
         self.assertIs(images[0][0], images[1][0])
         self.assertEqual(images[0][1].getpixel((0, 0)), (255, 0, 0))
+
+    def test_transformers_converts_windows_file_uris_to_native_paths(self):
+        self.require_transformers()
+        sources = ["file:///C:/temp/red%20image.png",
+                   "file://localhost/C:/temp/red%20image.png",
+                   "file://server/share/red%20image.png"]
+        with patch("llm2jev.backend.transformers.image_inputs.url2pathname",
+                   side_effect=nturl2path.url2pathname), \
+             patch("transformers.image_utils.load_image") as loader:
+            load_transformers_images([sources])
+        self.assertEqual([call.args[0] for call in loader.call_args_list],
+                         [r"C:\temp\red image.png", r"\\server\share\red image.png"])
 
     def test_urls_are_forwarded_to_native_loaders_unchanged(self):
         sources = ["file:///data/red%20image.png", "https://example.test/a.png",
