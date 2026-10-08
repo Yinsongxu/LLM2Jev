@@ -10,7 +10,7 @@
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue?style=flat-square)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green?style=flat-square)](LICENSE)
 [![Jev API](https://img.shields.io/badge/API-%2Fv1%2Fsystemone%20compatible-orange?style=flat-square)](docs/usage_zh.md)
-[![Backend](https://img.shields.io/badge/Backend-SGLang/MLX/Transformers-yellow?style=flat-square)](docs/usage_zh.md)
+[![Backend](https://img.shields.io/badge/Backend-SGLang|MLX|Transformers-yellow?style=flat-square)](docs/usage_zh.md)
 
 
 **让本地语言模型成为 Jev 风格的结构化决策模型：支持文本与图片输入，仅需 prefill 即可得到结果，无需逐 token 解码。**

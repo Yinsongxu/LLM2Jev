@@ -10,7 +10,7 @@
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue?style=flat-square)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green?style=flat-square)](LICENSE)
 [![Jev API](https://img.shields.io/badge/API-%2Fv1%2Fsystemone%20compatible-orange?style=flat-square)](docs/usage.md)
-[![Backend](https://img.shields.io/badge/Backend-SGLang/MLX/Transformers-yellow?style=flat-square)](docs/usage.md)
+[![Backend](https://img.shields.io/badge/Backend-SGLang|MLX|Transformers-yellow?style=flat-square)](docs/usage.md)
 
 [简体中文](README_zh.md)
 
