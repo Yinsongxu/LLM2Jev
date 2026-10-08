@@ -26,6 +26,7 @@
 
 ## 📰 最新动态
 
+- **10月8日** - **[Valen 推箱子评测](examples/valen_sokoban.py)**：新增视觉推箱子 demo 和单步动作评测，基于 [Valen](https://github.com/Liuziyu77/Valen) 项目。
 - **9月26日** - **[JevBench 测评](docs/jevbench.md)**： LLM2Jev 在 231 个公开题目上的准确率和延时，p50延时不到Jev官方的1/10。
 - **9月23日** - **[MLX后端](docs/usage_zh.md#offline-python-api)**：新增图文评分、候选批量执行、有界前缀缓存和兼容的 System One HTTP 服务。
 - **9月22日** - **[多模态输入](docs/multimodal_zh.md)**：SGLang、Transformers 和 System One HTTP API 均支持图文请求。
@@ -94,7 +95,7 @@ python examples/sglang_inference.py --model-path /path/to/model
   </tr>
   <tr>
     <td align="center" valign="middle"><img src="assets/mujoco.gif" alt="MuJoCo 机械臂抓取放置 demo" width="100%"><br><a href="demos/pick_place/README.md"><strong>MuJoCo 机械臂抓取放置 demo</strong></a></td>
-    <td></td>
+    <td align="center" valign="middle"><img src="assets/valen-sokoban.gif" alt="Valen Sokoban 决策 demo" width="100%"><br><a href="examples/valen_sokoban.py"><strong>推箱子 demo</strong></a></td>
   </tr>
 </table>
 
@@ -110,6 +111,10 @@ python examples/sglang_inference.py --model-path /path/to/model
 ![JevBench 公开题目准确率对比](assets/jevbench-accuracy.png)
 
 本次记录的 LLM2Jev 延时为 **P50 48 ms  / P95 346 ms**，Jev 1.13.0 的对应数值为 **P50 652 ms / P95 722 ms**。具体数据和复现命令见 [JevBench 报告](docs/jevbench.md)。
+
+### Valen-Eval-Game
+
+[单步评测脚本](examples/valen_sokoban_single_step.py)对 [Valen](https://github.com/Liuziyu77/Valen) 数据集中的 500 条图像 Sokoban 题计算并列最优动作准确率，使用多模态 `Choice` 流程和 SGLang 后端。
 
 ## 🗺️ 近期规划
 

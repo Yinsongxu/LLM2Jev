@@ -23,6 +23,7 @@
 
 ## 📰 News
 
+- **October 8** - **[Valen Sokoban evaluation](examples/valen_sokoban.py):** added a visual Sokoban demo and single-step action evaluation based on [Valen](https://github.com/Liuziyu77/Valen).
 - **September 26** - **[JevBench evaluation](docs/jevbench.md):** LLM2Jev accuracy and latency on 231 public items; P50 latency is below one tenth of the Jev official result.
 - **September 23** - **[MLX backend](docs/usage.md#offline-python-api):** added text and image scoring, candidate batching, bounded prefix reuse, and a compatible System One HTTP service.
 - **September 22** - **[Multimodal inputs](docs/multimodal.md):** added text-and-image requests for SGLang, Transformers, and the System One HTTP API.
@@ -91,7 +92,7 @@ See the [Usage guide](docs/usage.md) for complete examples:
   </tr>
   <tr>
     <td align="center" valign="middle"><img src="assets/mujoco.gif" alt="MuJoCo pick-and-place demo" width="100%"><br><a href="demos/pick_place/README.md"><strong>MuJoCo pick-and-place demo</strong></a></td>
-    <td></td>
+    <td align="center" valign="middle"><img src="assets/valen-sokoban.gif" alt="Valen Sokoban decision demo" width="100%"><br><a href="examples/valen_sokoban.py"><strong>Valen Sokoban demo</strong></a></td>
   </tr>
 </table>
 
@@ -107,6 +108,10 @@ This test covers 231 public JevBench items. LLM2Jev with Qwen3.5-4B measured **7
 ![JevBench public accuracy comparison](assets/jevbench-accuracy.png)
 
 The recorded LLM2Jev latency is **P50 48 ms / P95 346 ms**, while the Jev 1.13.0 values are **P50 652 ms / P95 722 ms**. See the [JevBench report](docs/jevbench.md) for the data and reproduction commands.
+
+### Valen-Eval-Game
+
+The [single-step evaluator](examples/valen_sokoban_single_step.py) measures tie-aware optimal-action accuracy on 500 image-conditioned Sokoban questions from [Valen](https://github.com/Liuziyu77/Valen). It uses the multimodal `Choice` pipeline with the SGLang backend.
 
 ## 🗺️ Roadmap
 
