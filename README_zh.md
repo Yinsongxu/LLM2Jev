@@ -121,7 +121,7 @@ python examples/sglang_inference.py --model-path /path/to/model
 - [ ] 更多 benchmark：覆盖不同模型规模、数据集和工作负载，评估判断质量、延迟与吞吐量。
 - [x] 网页 demo：交互式提交问题并查看概率结果。
 - [x] Transformers 和 SGLang 的首版本地图片支持。
-- [ ] 更多多模态任务及 demo。
+- [x] 更多多模态任务及 demo。
 
 ## 🧪 测试
 

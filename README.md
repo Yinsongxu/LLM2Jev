@@ -118,7 +118,7 @@ The [single-step evaluator](examples/valen_sokoban_single_step.py) measures tie-
 - [ ] More benchmarks across model sizes, datasets, and workloads, covering decision quality, latency, and throughput.
 - [x] An interactive web demo for submitting questions and inspecting probabilities.
 - [x] Initial local-image support for Transformers and SGLang.
-- [ ] More multimodal tasks and demos.
+- [x]  More multimodal tasks and demos.
 
 ## 🧪 Tests
 
