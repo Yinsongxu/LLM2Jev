@@ -48,6 +48,20 @@ class SGLangBackend:
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_path, local_files_only=True,
         )
+        if not self.tokenizer.chat_template:
+            import json
+
+            template_path = Path(self.model_path) / "chat_template.json"
+
+            if template_path.is_file():
+                with template_path.open("r", encoding="utf-8") as f:
+                    template_data = json.load(f)
+
+                template = (
+                    template_data.get("chat_template")
+                    if isinstance(template_data, dict)
+                    else template_data
+                )
         self.yes_token_id = _single_token_id(
             self.tokenizer, yes_label, "yes_label",
         )
