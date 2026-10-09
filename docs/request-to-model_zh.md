@@ -137,13 +137,15 @@ Context:
 信用卡重复扣款，请退回多扣的钱。
 
 Question:
-Evaluation objective: 哪个部门应该处理这个请求？
-Candidate: billing
-Does this candidate match the context?
-Candidate definition: 扣款和账单
+哪个部门应该处理这个请求？
+All candidates:
+shipping: Delivery
+billing: 扣款和账单
+returns: Returns and exchanges
+Is this candidate "billing: 扣款和账单" the best answer?
 ```
 
-其他候选使用相同的材料和问题目标，替换 `Candidate` 与 `Candidate definition` 即可。使用者可以在每次请求中定义新的选项和含义，无需为每组选项新增固定分类头。
+其他候选使用相同的材料、问题目标和候选列表，只改变最后一行中被引用的候选。使用者可以在每次请求中定义新的选项和含义，无需为每组选项新增固定分类头。
 
 后端为每组消息应用 LLM 自带的聊天模板，添加角色和回答起始标记，再对完整消息分词。至此，一个 Jev 问题就变成了多个可交给 LLM 评分的 yes/no 输入。接下来才是如何从这些输入取得概率。
 

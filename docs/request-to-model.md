@@ -135,13 +135,15 @@ Context:
 My card was charged twice. Please refund the extra charge.
 
 Question:
-Evaluation objective: Which department should handle this request?
-Candidate: billing
-Does this candidate match the context?
-Candidate definition: Charges and billing
+Which department should handle this request?
+All candidates:
+shipping: Delivery
+billing: Charges and billing
+returns: Returns and exchanges
+Is this candidate "billing: Charges and billing" the best answer?
 ```
 
-Other candidates use the same evidence and question objective, replacing only `Candidate` and `Candidate definition`. Users can define new options and meanings with each request without adding a fixed classification head for every option set.
+Other candidates use the same evidence, question objective and candidate list, changing only the candidate quoted in the final line. Users can define new options and meanings with each request without adding a fixed classification head for every option set.
 
 The backend applies the LLM's chat template to each message pair, adds role and assistant-start markers, then tokenizes the complete messages. A Jev question has now become multiple yes/no inputs ready for the LLM to score. The next step is to obtain probabilities from those inputs.
 
