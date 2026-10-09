@@ -1,5 +1,8 @@
+import json
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -68,6 +71,48 @@ class SGLangBackendTests(unittest.TestCase):
             list(self.prompts[0]), tokenize=False,
             add_generation_prompt=True, enable_thinking=True,
         )
+
+    def test_applies_standalone_chat_template_from_object_file(self) -> None:
+        with tempfile.TemporaryDirectory() as model_dir:
+            template_path = Path(model_dir) / "chat_template.json"
+            template_path.write_text(
+                json.dumps({"chat_template": "standalone template"}), encoding="utf-8",
+            )
+            self.tokenizer.chat_template = None
+            with SGLangBackend(model_dir) as backend:
+                self.assertEqual(backend.tokenizer.chat_template, "standalone template")
+
+    def test_applies_standalone_chat_template_from_raw_string_file(self) -> None:
+        with tempfile.TemporaryDirectory() as model_dir:
+            template_path = Path(model_dir) / "chat_template.json"
+            template_path.write_text(json.dumps("raw template"), encoding="utf-8")
+            self.tokenizer.chat_template = ""
+            with SGLangBackend(model_dir) as backend:
+                self.assertEqual(backend.tokenizer.chat_template, "raw template")
+
+    def test_keeps_missing_chat_template_unset(self) -> None:
+        with tempfile.TemporaryDirectory() as model_dir:
+            self.tokenizer.chat_template = None
+            with SGLangBackend(model_dir) as backend:
+                self.assertIsNone(backend.tokenizer.chat_template)
+
+    def test_skips_standalone_file_without_chat_template_field(self) -> None:
+        with tempfile.TemporaryDirectory() as model_dir:
+            template_path = Path(model_dir) / "chat_template.json"
+            template_path.write_text("{}", encoding="utf-8")
+            self.tokenizer.chat_template = None
+            with SGLangBackend(model_dir) as backend:
+                self.assertIsNone(backend.tokenizer.chat_template)
+
+    def test_prefers_existing_chat_template_over_standalone_file(self) -> None:
+        with tempfile.TemporaryDirectory() as model_dir:
+            template_path = Path(model_dir) / "chat_template.json"
+            template_path.write_text(
+                json.dumps({"chat_template": "standalone template"}), encoding="utf-8",
+            )
+            self.tokenizer.chat_template = "configured template"
+            with SGLangBackend(model_dir) as backend:
+                self.assertEqual(backend.tokenizer.chat_template, "configured template")
 
     def test_default_staged_submission_preserves_full_inputs_output_order_and_usage(self) -> None:
         ids = [[1, 2, 3, 10], [1, 2, 3, 11], [1, 2, 4, 12], [1, 2, 4, 13]]
