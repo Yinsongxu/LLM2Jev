@@ -62,6 +62,8 @@ class SGLangBackend:
                     if isinstance(template_data, dict)
                     else template_data
                 )
+                if template:
+                    self.tokenizer.chat_template = template
         self.yes_token_id = _single_token_id(
             self.tokenizer, yes_label, "yes_label",
         )
