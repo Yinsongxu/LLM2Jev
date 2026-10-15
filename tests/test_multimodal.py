@@ -10,12 +10,16 @@ from unittest.mock import Mock, patch
 
 from llm2jev import (
     Choice, DefaultPromptRenderer, JevRequest, LLM2Jev, Noul, Score,
-    SGLangBackend, TransformersBackend, compile_binary_questions,
+    SGLangBackend, TransformersBackend,
 )
 from llm2jev.backend.transformers.image_inputs import load_transformers_images, prepare_image_prompts
 from llm2jev.backend.sglang.scoring import score_output
 from llm2jev.server.sglang_server import _evaluate_request, _parse_request
 from test_sglang_fakes import native_modules, score_result
+
+
+def score_prompts(request):
+    return DefaultPromptRenderer().render(request).score_prompts
 
 
 def image_text(path="image.png", text="Evidence"):
@@ -36,10 +40,10 @@ class MultimodalContentTests(unittest.TestCase):
                 questions={"q": kind(instructions=image_text("question.png"), **kwargs)},
             )
             self.assertEqual(_parse_request(request.to_dict()), request)
-            tasks = compile_binary_questions(request)
-            for task in tasks:
-                self.assertEqual(task.context, image_text("shared.png"))
-                self.assertEqual(task.objective, image_text("question.png"))
+            rendered = DefaultPromptRenderer().render(request)
+            self.assertEqual(len(rendered.score_prompts), 2 if kind is not Noul else 1)
+            self.assertTrue(all("shared.png" in str(prompt) and "question.png" in str(prompt)
+                                for prompt in rendered.score_prompts))
 
     def test_rejects_malformed_tagged_content_at_both_locations(self):
         invalid = [
@@ -71,7 +75,7 @@ class MultimodalContentTests(unittest.TestCase):
         for value in ({"image": "business value", "text": "description"},
                       {"nested": image_text()}, [image_text()], image_text()["content"]):
             request = JevRequest(state=value, model="local", questions={"q": Noul(instructions=value)})
-            content = DefaultPromptRenderer().render(compile_binary_questions(request)[0])[1]["content"]
+            content = score_prompts(request)[0][1]["content"]
             self.assertIsInstance(content, str)
             self.assertIn('"', content)
 
@@ -81,7 +85,7 @@ class MultimodalContentTests(unittest.TestCase):
             questions={"q": Choice(instructions=image_text("q.png", "question"),
                                    criteria={"a": "first", "b": "second"})},
         )
-        prompts = [DefaultPromptRenderer().render(t) for t in compile_binary_questions(request)]
+        prompts = list(score_prompts(request))
         first, second = (p[1]["content"] for p in prompts)
         self.assertEqual([p["type"] for p in first], ["text", "text", "image_url", "text", "text", "image_url", "text"])
         self.assertEqual(first[:-1], second[:-1])
@@ -102,7 +106,7 @@ class MultimodalContentTests(unittest.TestCase):
                 questions={"q": Noul(instructions="Is it red?" if in_state else image_text(text="Is it red?"),
                                      criteria={"true": "Red", "false": "Not red"})},
             )
-            parts = [DefaultPromptRenderer().render(t)[1]["content"] for t in compile_binary_questions(request)]
+            parts = [prompt[1]["content"] for prompt in score_prompts(request)]
             self.assertEqual(parts[0][:-1], parts[1][:-1])
             self.assertNotIn("above yes?", parts[0][-1]["text"])
             self.assertNotIn("above no?", parts[1][-1]["text"])
@@ -122,10 +126,8 @@ class MultimodalContentTests(unittest.TestCase):
                     )},
                 )
                 renderer = DefaultPromptRenderer()
-                default = [renderer.render(t) for t in compile_binary_questions(request)]
-                hidden = [renderer.render(t) for t in compile_binary_questions(
-                    replace(request, include_choice_candidates=False)
-                )]
+                default = list(renderer.render(request).score_prompts)
+                hidden = list(renderer.render(replace(request, include_choice_candidates=False)).score_prompts)
                 for index, candidate in enumerate(("up: Move up", "down: Move down")):
                     self.assertEqual(hidden[index][0], default[index][0])
                     self.assertEqual(hidden[index][1]["content"][:-1], default[index][1]["content"][:-1])
@@ -138,11 +140,10 @@ class MultimodalContentTests(unittest.TestCase):
         value = image_text("first.png")
         value["content"].extend(image_text("second.png", "Compare these")["content"])
         request = JevRequest(state=value, model="local", questions={"q": Noul()})
-        task = compile_binary_questions(request)[0]
-        parts = DefaultPromptRenderer().render(task)[1]["content"]
+        parts = score_prompts(request)[0][1]["content"]
         self.assertEqual(parts[1:5], value["content"])
         parts[2]["image_url"]["url"] = "changed.png"
-        self.assertEqual(task.context["content"][1]["image_url"]["url"], "first.png")
+        self.assertEqual(value["content"][1]["image_url"]["url"], "first.png")
 
     def test_text_only_and_image_only_blocks_are_valid(self):
         for content in ([{"type": "text", "text": ""}],
@@ -150,7 +151,7 @@ class MultimodalContentTests(unittest.TestCase):
             request = JevRequest(state={"type": "multimodal", "content": content},
                                  model="local", questions={"q": Noul()})
             self.assertEqual(_parse_request(request.to_dict()), request)
-            rendered = DefaultPromptRenderer().render(compile_binary_questions(request)[0])
+            rendered = score_prompts(request)[0]
             self.assertIsInstance(rendered[1]["content"], str if content[0]["type"] == "text" else list)
 
 
@@ -174,7 +175,7 @@ class ImageBackendTests(unittest.TestCase):
             state=image_text(self.path), model="local",
             questions={"q": Choice(instructions="What color?", criteria={"red": None, "blue": None})},
         )
-        self.prompts = tuple(DefaultPromptRenderer().render(t) for t in compile_binary_questions(self.request))
+        self.prompts = score_prompts(self.request)
 
     def test_separates_sources_from_template_without_loading_images(self):
         with patch("PIL.Image.open", side_effect=AssertionError("must use native loader")):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..core.questions import Choice, Noul, Score
+from ..core.questions import Box, Choice, Noul, Score
 from ..core.request import JevRequest, Question
 
 
@@ -12,6 +12,10 @@ def parse_question(value: object) -> Question:
 
     question_type = value.get("type")
     instructions = value.get("instructions")
+    if question_type == "box":
+        if "criteria" in value:
+            raise ValueError("box questions do not accept criteria")
+        return Box(instructions=instructions)  # type: ignore[arg-type]
     if question_type == "choice":
         criteria = value.get("criteria")
         if not isinstance(criteria, Mapping):
@@ -35,7 +39,7 @@ def parse_question(value: object) -> Question:
             instructions=instructions,
             criteria=criteria,
         )
-    raise ValueError("question type must be choice, score, or noul")
+    raise ValueError("question type must be box, choice, score, or noul")
 
 
 def parse_request(payload: object) -> JevRequest:

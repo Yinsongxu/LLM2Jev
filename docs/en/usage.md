@@ -60,6 +60,16 @@ with MLXBackend("/path/to/mlx-model") as backend:
 
 For image models, use `MLXBackend(..., multimodal=True)`. See [Multimodal inputs](multimodal.md).
 
+Custom backends implement the `Backend` protocol exported from `llm2jev`: `score()` returns `ScoreOutput`, and `generate()` returns `GenerationOutput`. `Backend` replaces `BinaryBackend` and requires both methods, as provided by all three built-in backends. Box still requires an image-capable model and the backend's multimodal setup.
+
+Both outputs expose probabilities in `[0, 1]`: `ScoreOutput.yes_probabilities` normalizes over the `yes`/`no` pair, while `GenerationOutput.token_probabilities` contains each generated token's probability over the full vocabulary, aligned with `token_texts`.
+
+Custom renderers implement `render(request: JevRequest) -> RenderedPrompts` and are passed to `LLM2Jev(backend=backend, renderer=renderer)`. The renderer handles the whole request, including Box prompts; there is no separate binary-question compilation step. `DefaultPromptRenderer` uses a static method for each question type.
+
+`RenderedPrompts` contains `score_prompts`, `score_question_ids`, `box_prompts`, and `box_question_ids`. Each prompt has a corresponding question ID. Within each scoring question, preserve criteria order for Choice and Score, and true/false order for Noul with criteria; Noul without criteria uses one prompt. Each Box uses one generation prompt.
+
+`assemble_response(request=request, rendered=rendered, scored=scored, generated=generated)` uses those IDs to associate backend outputs with questions and assembles answers and combined usage. Omit the output for any inference stage the request does not need. When `rendered` is omitted, outputs must follow the default request and candidate order. The optional `normalizer` controls candidate normalization.
+
 ## Online: HTTP service
 
 Activate the virtual environment created during installation, then run `llm2jev-serve` directly. SGLang uses its native startup arguments; select MLX or Transformers with `--backend`:
@@ -112,7 +122,7 @@ response = client.systemone.create(
 print(response.choices["department"].probabilities)
 ```
 
-`questions` accepts `Choice`, `Score`, and `Noul` objects, JSON dictionaries containing `type`, or a mixture of both. `state` supports the same text, JSON, and multimodal content as offline requests. The result is a `JevResponse`, with typed answers, `usage`, `to_dict()`, and `json`. `include_choice_candidates` defaults to `True` and can be changed for each call.
+`questions` accepts `Box`, `Choice`, `Score`, and `Noul` objects, JSON dictionaries containing `type`, or a mixture of both. `state` supports the same text, JSON, and multimodal content as offline requests. The result is a `JevResponse`, with typed answers, `usage`, `to_dict()`, and `json`. `include_choice_candidates` defaults to `True` and can be changed for each call.
 
 The asynchronous interface uses the same arguments:
 

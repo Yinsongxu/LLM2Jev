@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from ...core.response import Usage
 from ...inference.prompt import ChatPrompt
-from ..base import BinaryBackendOutput
+from ..base import ScoreOutput, GenerationOutput
 from .image_inputs import has_images, load_transformers_images, prepare_image_prompts
-from ..tokenization import _apply_chat_template, _single_token_id
+from ..tokenization import _apply_chat_template, _generated_token_texts, _single_token_id
 
 
 class TransformersBackend:
@@ -91,7 +92,7 @@ class TransformersBackend:
         *,
         model: str,
         prompts: Sequence[ChatPrompt],
-    ) -> BinaryBackendOutput:
+    ) -> ScoreOutput:
         del model  # The loaded model path is fixed when the backend is constructed.
         prompt_values = tuple(prompts)
         if not prompt_values:
@@ -154,7 +155,7 @@ class TransformersBackend:
             probabilities = self._torch.softmax(binary_logits.float(), dim=-1)[:, 1]
             yes_probabilities.extend(probabilities.cpu().tolist())
 
-        return BinaryBackendOutput(
+        return ScoreOutput(
             yes_probabilities=yes_probabilities,
             usage=Usage(input_tokens=input_tokens, output_tokens=0),
         )
@@ -165,6 +166,50 @@ class TransformersBackend:
             device=attention_mask.device,
         ).expand_as(attention_mask)
         return positions.masked_fill(attention_mask == 0, -1).max(dim=1).values
+
+    def generate(
+        self, *, model: str, prompts: Sequence[ChatPrompt], max_new_tokens: int,
+    ) -> GenerationOutput:
+        """Generate grounding JSON using the already loaded multimodal model."""
+        del model
+        if self.model is None:
+            raise RuntimeError("TransformersBackend is closed")
+        if self.processor is None:
+            raise ValueError("Box generation requires TransformersBackend(multimodal=True)")
+        if not prompts:
+            raise ValueError("prompts must not be empty")
+        token_texts, token_probabilities, input_tokens, output_tokens = [], [], 0, 0
+        rendered, sources = prepare_image_prompts(self.processor, prompts, enable_thinking=False)
+        images = load_transformers_images(sources)
+        # Individual prompts avoid padding-dependent generation and mRoPE differences.
+        for text, row in zip(rendered, images):
+            encoded = self.processor(
+                text=[text], images=row or None, return_tensors="pt", add_special_tokens=False,
+            )
+            inputs = {name: value.to(self.device) for name, value in encoded.items()}
+            input_tokens += int(inputs["attention_mask"].sum().item())
+            with self._torch.inference_mode():
+                result = self.model.generate(
+                    **inputs, do_sample=False, max_new_tokens=max_new_tokens,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    return_dict_in_generate=True, output_logits=True,
+                )
+            tokens = result.sequences[0, inputs["input_ids"].shape[1]:]
+            eos = self.model.generation_config.eos_token_id
+            eos_ids = eos if isinstance(eos, list) else [eos]
+            if len(tokens) == max_new_tokens and int(tokens[-1].item()) not in eos_ids:
+                raise ValueError("Box generation was truncated at the token limit")
+            output_tokens += len(tokens)
+            pieces = _generated_token_texts(self.tokenizer, tokens.tolist())
+            token_texts.append(pieces)
+            token_probabilities.append([
+                math.exp(float(self._torch.log_softmax(logits[0].float(), dim=-1)[token].item()))
+                for token, logits in zip(tokens, result.logits)
+            ])
+        return GenerationOutput(
+            token_texts=token_texts, token_probabilities=token_probabilities,
+            usage=Usage(input_tokens=input_tokens, output_tokens=output_tokens),
+        )
 
     def close(self) -> None:
         """Release references to the model and tokenizer; safe to call repeatedly."""

@@ -8,6 +8,12 @@ def is_multimodal(value: object) -> TypeGuard[Mapping[str, Any]]:
     return isinstance(value, Mapping) and value.get("type") == "multimodal"
 
 
+def contains_image(value: object) -> bool:
+    return is_multimodal(value) and any(
+        part["type"] == "image_url" for part in value["content"]
+    )
+
+
 def validate_multimodal(value: object) -> None:
     if not is_multimodal(value):
         return

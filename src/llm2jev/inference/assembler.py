@@ -4,13 +4,15 @@ import math
 from collections.abc import Callable, Sequence
 from typing import TypeAlias
 
+from ..backend.base import GenerationOutput, ScoreOutput
 from ..core.answers import Answer, ChoiceAnswer, NoulAnswer, ScoreAnswer
-from ..core.questions import Choice, Noul, Score
+from ..core.questions import Box, Choice, Noul, Score
 from ..core.request import JevRequest
 from ..core.response import JevResponse, Usage
 from ..utils.probability import validate_probabilities
-from .binary import BinaryQuestion, compile_binary_questions
+from .box import assemble_box_answers
 from .normalization import normalize_l1
+from .prompt import RenderedPrompts
 
 
 Normalizer: TypeAlias = Callable[[Sequence[float]], Sequence[float]]
@@ -39,39 +41,49 @@ def _confidence(probabilities: Sequence[float]) -> float:
 def assemble_response(
     *,
     request: JevRequest,
-    tasks: Sequence[BinaryQuestion],
-    yes_probabilities: Sequence[float],
-    usage: Usage | None = None,
+    rendered: RenderedPrompts | None = None,
+    scored: ScoreOutput | None = None,
+    generated: GenerationOutput | None = None,
     normalizer: Normalizer = normalize_l1,
 ) -> JevResponse:
-    """Assemble binary yes probabilities into a Jev response."""
+    """Assemble backend outputs into answers and combined token usage."""
 
-    task_values = tuple(tasks)
-    expected_tasks = compile_binary_questions(request)
-    if task_values != expected_tasks:
-        raise ValueError("tasks must exactly match the compiled request")
-
-    raw_probabilities = validate_probabilities(yes_probabilities)
-    if len(raw_probabilities) != len(task_values):
+    score_question_ids = (
+        rendered.score_question_ids
+        if rendered is not None
+        else _score_question_ids(request)
+    )
+    raw_probabilities = scored.yes_probabilities if scored is not None else ()
+    if len(raw_probabilities) != len(score_question_ids):
         raise ValueError("each binary task must have exactly one yes probability")
+    box_ids = (
+        rendered.box_question_ids
+        if rendered is not None
+        else tuple(name for name, question in request.questions.items() if isinstance(question, Box))
+    )
+    if box_ids and generated is None:
+        raise ValueError("box questions require generated output")
+    box_answers = assemble_box_answers(box_ids, generated) if generated is not None else {}
 
-    grouped: dict[str, list[tuple[BinaryQuestion, float]]] = {
+    grouped: dict[str, list[float]] = {
         question_id: [] for question_id in request.questions
     }
-    for task, probability in zip(task_values, raw_probabilities):
-        grouped[task.question_id].append((task, probability))
+    for question_id, probability in zip(score_question_ids, raw_probabilities):
+        if question_id not in grouped:
+            raise ValueError(f"renderer returned unknown question ID {question_id!r}")
+        grouped[question_id].append(probability)
 
     answers: dict[str, Answer] = {}
     for question_id, question in request.questions.items():
-        task_probabilities = grouped[question_id]
-        candidates = [task.candidate for task, _ in task_probabilities]
-        raw = [probability for _, probability in task_probabilities]
+        raw = grouped[question_id]
 
-        if isinstance(question, Choice):
-            if len(candidates) < 2:
+        if isinstance(question, Box):
+            answers[question_id] = box_answers[question_id]
+        elif isinstance(question, Choice):
+            labels = list(question.criteria)
+            if len(labels) < 2:
                 raise ValueError("choice answers require at least two candidates")
             probabilities = _normalize(raw, normalizer)
-            labels = list(question.criteria)
             by_label = dict(zip(labels, probabilities))
             choice = max(labels, key=by_label.__getitem__)
             answers[question_id] = ChoiceAnswer(
@@ -92,7 +104,7 @@ def assemble_response(
         elif isinstance(question, Noul):
             if question.criteria:
                 probabilities = _normalize(raw, normalizer)
-                by_candidate = dict(zip(candidates, probabilities))
+                by_candidate = dict(zip(("true", "false"), probabilities))
                 answers[question_id] = NoulAnswer(noul=by_candidate["true"])
             else:
                 answers[question_id] = NoulAnswer(noul=raw[0])
@@ -102,5 +114,31 @@ def assemble_response(
     return JevResponse(
         model=request.model,
         answers=answers,
-        usage=usage if usage is not None else Usage(),
+        usage=sum_usage(*(output.usage for output in (scored, generated) if output is not None)),
     )
+
+
+def _score_question_ids(request: JevRequest) -> tuple[str, ...]:
+    ids: list[str] = []
+    for question_id, question in request.questions.items():
+        if isinstance(question, Box):
+            continue
+        if isinstance(question, Choice):
+            if not question.criteria:
+                raise ValueError("choice questions must contain criteria")
+            count = len(question.criteria)
+        elif isinstance(question, Score):
+            count = len(question.criteria)
+        elif isinstance(question, Noul):
+            count = 2 if question.criteria else 1
+        else:
+            raise TypeError(f"unsupported question type: {type(question).__name__}")
+        ids.extend([question_id] * count)
+    return tuple(ids)
+
+
+def sum_usage(*usages: Usage) -> Usage:
+    def total(field: str) -> int | None:
+        values = [getattr(usage, field) for usage in usages]
+        return None if any(value is None for value in values) else sum(values)
+    return Usage(input_tokens=total("input_tokens"), output_tokens=total("output_tokens"))

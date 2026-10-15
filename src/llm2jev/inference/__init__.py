@@ -1,6 +1,5 @@
-from ..backend.base import BinaryBackend, BinaryBackendOutput
+from ..backend.base import Backend, ScoreOutput
 from .assembler import Normalizer, assemble_response
-from .binary import BinaryQuestion, compile_binary_questions
 from .converter import LLM2Jev
 from .normalization import normalize_l1
 from .prompt import (
@@ -8,21 +7,21 @@ from .prompt import (
     ChatPrompt,
     DefaultPromptRenderer,
     PromptRenderer,
+    RenderedPrompts,
     serialize_content,
 )
 
 __all__ = [
-    "BinaryBackend",
-    "BinaryBackendOutput",
-    "BinaryQuestion",
+    "Backend",
+    "ScoreOutput",
     "ChatMessage",
     "ChatPrompt",
     "DefaultPromptRenderer",
     "LLM2Jev",
     "Normalizer",
     "PromptRenderer",
+    "RenderedPrompts",
     "assemble_response",
-    "compile_binary_questions",
     "normalize_l1",
     "serialize_content",
 ]

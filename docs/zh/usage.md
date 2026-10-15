@@ -60,6 +60,16 @@ with MLXBackend("/path/to/mlx-model") as backend:
 
 图片模型需使用 `MLXBackend(..., multimodal=True)`。详见[多模态输入](multimodal.md)和 [MLX 部分](#offline-python-api)。
 
+自定义后端实现从 `llm2jev` 导出的 `Backend` 协议：`score()` 返回 `ScoreOutput`，`generate()` 返回 `GenerationOutput`。`Backend` 替代 `BinaryBackend`，统一要求提供这两个方法，三个内置后端均已实现。Box 仍需使用支持图片的模型及后端多模态配置。
+
+两种输出均使用 `[0, 1]` 概率：`ScoreOutput.yes_probabilities` 在 `yes`/`no` 两者间归一化；`GenerationOutput.token_probabilities` 是每个生成 token 在完整词表上的概率，与 `token_texts` 逐项对应。
+
+自定义 renderer 实现 `render(request: JevRequest) -> RenderedPrompts`，通过 `LLM2Jev(backend=backend, renderer=renderer)` 传入。renderer 直接处理完整请求，包括 Box 提示词，不再经过独立的二分类问题编译步骤。`DefaultPromptRenderer` 为每种题型提供一个静态方法。
+
+`RenderedPrompts` 包含 `score_prompts`、`score_question_ids`、`box_prompts` 和 `box_question_ids`，每个提示词对应一个问题 ID。同一评分问题内，Choice 和 Score 保持 criteria 顺序；带 criteria 的 Noul 按 true、false 顺序生成两个提示词，不带 criteria 时生成一个。每个 Box 生成一个坐标提示词。
+
+`assemble_response(request=request, rendered=rendered, scored=scored, generated=generated)` 根据这些 ID 对应后端输出与问题，统一组装答案并合并用量。不需要执行的推理阶段可省略对应输出；省略 `rendered` 时，输出须遵循默认的请求及候选顺序。可选的 `normalizer` 控制候选概率归一化。
+
 ## Online: HTTP 服务
 
 激活安装时创建的虚拟环境后，可直接运行 `llm2jev-serve`。SGLang 使用其原生启动参数，MLX 和 Transformers 使用 `--backend` 选择：
@@ -112,7 +122,7 @@ response = client.systemone.create(
 print(response.choices["department"].probabilities)
 ```
 
-`questions` 支持 `Choice`、`Score`、`Noul` 对象，也支持包含 `type` 的 JSON 字典，两种写法可以混用。`state` 与 offline 请求一样支持文本、JSON 和多模态内容。返回值是 `JevResponse`，包含类型化答案、`usage`、`to_dict()` 和 `json`。`include_choice_candidates` 默认 `True`，可在每次调用时设置。
+`questions` 支持 `Box`、`Choice`、`Score`、`Noul` 对象，也支持包含 `type` 的 JSON 字典，两种写法可以混用。`state` 与 offline 请求一样支持文本、JSON 和多模态内容。返回值是 `JevResponse`，包含类型化答案、`usage`、`to_dict()` 和 `json`。`include_choice_candidates` 默认 `True`，可在每次调用时设置。
 
 异步接口使用相同参数：
 

@@ -5,12 +5,14 @@ import os
 import sys
 from typing import Any
 
+from ..backend.base import ScoreOutput
 from ..backend.tokenization import _single_token_id
 from ..backend.sglang.scoring import prepare_score_batches, score_output
+from ..backend.sglang.generation import generation_output, prepare_generation_request
 from ..core.request import JevRequest
 from ..core.response import JevResponse, Usage
 from ..inference.assembler import assemble_response
-from ..inference.binary import compile_binary_questions
+from ..inference.box import BOX_MAX_NEW_TOKENS
 from ..inference.prompt import DefaultPromptRenderer
 from ..inference.request_parser import (
     parse_question as _parse_question,
@@ -32,19 +34,33 @@ async def _evaluate_request(
     if tokenizer is None:
         raise RuntimeError("System One requires SGLang tokenization to be enabled")
 
-    tasks = compile_binary_questions(request)
     renderer = DefaultPromptRenderer()
-    prompts = tuple(renderer.render(task) for task in tasks)
-    no_token_id = _single_token_id(tokenizer, "no", "no_label")
-    yes_token_id = _single_token_id(tokenizer, "yes", "yes_label")
-    if no_token_id == yes_token_id:
-        raise ValueError("yes_label and no_label must encode to different tokens")
+    rendered = renderer.render(request)
+    prompts = rendered.score_prompts
+    generated = None
+    if rendered.box_prompts:
+        arguments = await asyncio.to_thread(
+            prepare_generation_request, tokenizer, getattr(tokenizer_manager, "processor", None),
+            rendered.box_prompts, max_new_tokens=BOX_MAX_NEW_TOKENS,
+        )
+        stream = tokenizer_manager.generate_request(GenerateReqInput(**arguments), None)
+        try:
+            result = await stream.__anext__()
+        finally:
+            await stream.aclose()
+        generated = generation_output(result, expected_count=len(rendered.box_prompts), tokenizer=tokenizer)
 
-    batches = await asyncio.to_thread(
-        prepare_score_batches, tokenizer, getattr(tokenizer_manager, "processor", None),
-        prompts, enable_thinking=False, submission=submission,
-        no_token_id=no_token_id, yes_token_id=yes_token_id,
-    )
+    batches = []
+    if prompts:
+        no_token_id = _single_token_id(tokenizer, "no", "no_label")
+        yes_token_id = _single_token_id(tokenizer, "yes", "yes_label")
+        if no_token_id == yes_token_id:
+            raise ValueError("yes_label and no_label must encode to different tokens")
+        batches = await asyncio.to_thread(
+            prepare_score_batches, tokenizer, getattr(tokenizer_manager, "processor", None),
+            prompts, enable_thinking=False, submission=submission,
+            no_token_id=no_token_id, yes_token_id=yes_token_id,
+        )
     probabilities = [0.0] * len(prompts)
     input_tokens = 0
     for indices, arguments in batches:
@@ -60,10 +76,10 @@ async def _evaluate_request(
         for index, probability in zip(indices, output.yes_probabilities):
             probabilities[index] = probability
         input_tokens += output.usage.input_tokens
-    return assemble_response(
-        request=request, tasks=tasks, yes_probabilities=probabilities,
-        usage=Usage(input_tokens=input_tokens, output_tokens=0),
-    )
+    scored = ScoreOutput(
+        yes_probabilities=probabilities, usage=Usage(input_tokens=input_tokens, output_tokens=0),
+    ) if prompts else None
+    return assemble_response(request=request, rendered=rendered, scored=scored, generated=generated)
 
 
 def register_systemone_route(*, submission: str = "staged") -> Any:

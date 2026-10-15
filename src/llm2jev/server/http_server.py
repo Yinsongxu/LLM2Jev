@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from ..backend.base import BinaryBackend
+from ..backend.base import Backend
 from ..core.request import JevRequest
 from ..core.response import JevResponse
 from ..inference.converter import LLM2Jev
@@ -72,7 +72,7 @@ def run_http_server(app: Any, args: argparse.Namespace, *, backend_name: str) ->
 class ModelWorker:
     """Run model setup, inference and cleanup on one dedicated thread."""
 
-    def __init__(self, factory: Callable[[], BinaryBackend]) -> None:
+    def __init__(self, factory: Callable[[], Backend]) -> None:
         self._factory = factory
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="llm2jev-model")
         self._converter: LLM2Jev | None = None
@@ -127,7 +127,7 @@ class ModelWorker:
 def create_http_app(
     model_path: str | Path,
     *,
-    backend_factory: Callable[[], BinaryBackend],
+    backend_factory: Callable[[], Backend],
     backend_name: str,
     served_model_name: str | None = None,
     api_key: str | None = None,

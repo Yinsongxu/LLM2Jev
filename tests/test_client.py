@@ -7,7 +7,7 @@ import httpx
 from openai import APIResponseValidationError, APITimeoutError, UnprocessableEntityError
 
 from llm2jev import (
-    AsyncClient, BinaryBackendOutput, Choice, ChoiceAnswer, Client,
+    AsyncClient, ScoreOutput, Choice, ChoiceAnswer, Client,
     JevResponse, Noul, NoulAnswer, Score, ScoreAnswer, Usage,
 )
 from llm2jev.server import mlx_server, transformers_server
@@ -228,7 +228,7 @@ class AsyncClientTests(unittest.IsolatedAsyncioTestCase):
         for module in (mlx_server, transformers_server):
             with self.subTest(backend=module.__name__):
                 backend = Mock()
-                backend.score.return_value = BinaryBackendOutput(
+                backend.score.return_value = ScoreOutput(
                     yes_probabilities=[0.8, 0.2], usage=Usage(input_tokens=100, output_tokens=0),
                 )
                 app = module.create_app("local", api_key="secret", backend_factory=lambda: backend)

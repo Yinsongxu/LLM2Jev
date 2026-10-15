@@ -8,7 +8,7 @@ import httpx
 from openai import NOT_GIVEN, APIResponseValidationError, AsyncOpenAI, NotGiven, OpenAI
 
 from .core import (
-    Answer, Choice, ChoiceAnswer, JevRequest, JevResponse, Noul, NoulAnswer,
+    Answer, Box, BoxAnswer, Choice, ChoiceAnswer, JevRequest, JevResponse, Noul, NoulAnswer,
     Score, ScoreAnswer, State, Usage,
 )
 from .core.request import Question
@@ -27,7 +27,7 @@ def _request_body(
         model=model,
         state=state,
         questions={
-            name: question if isinstance(question, (Choice, Score, Noul)) else parse_question(question)
+            name: question if isinstance(question, (Box, Choice, Score, Noul)) else parse_question(question)
             for name, question in questions.items()
         },
         include_choice_candidates=include_choice_candidates,
@@ -67,10 +67,14 @@ def _parse_response(response: httpx.Response) -> JevResponse:
                     legend=_score_levels(answer["legend"]),
                     probabilities=_score_levels(answer["probabilities"]),
                 )
+            elif answer["type"] == "box":
+                answers[name] = BoxAnswer(
+                    box=_mapping(answer["box"]), confidence=answer["confidence"],
+                )
             elif answer["type"] == "noul":
                 answers[name] = NoulAnswer(noul=answer["noul"])
             else:
-                raise ValueError("answer type must be choice, score, or noul")
+                raise ValueError("answer type must be box, choice, score, or noul")
         usage = _mapping(data["usage"])
         return JevResponse(
             model=data["model"], answers=answers,

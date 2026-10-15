@@ -7,15 +7,14 @@ from typing import Any
 
 from ...core.response import Usage
 from ...inference.prompt import ChatPrompt
-from ..base import BinaryBackendOutput
+from ..base import ScoreOutput
 from .prefix_plan import staged_batches
 from ..tokenization import _apply_chat_template
 
 
-def prepare_score_batches(
-    tokenizer: Any, processor: Any, prompts: Sequence[ChatPrompt], *,
-    enable_thinking: bool, submission: str, no_token_id: int, yes_token_id: int,
-) -> list[tuple[list[int], dict[str, Any]]]:
+def _prepare_inputs(
+    tokenizer: Any, processor: Any, prompts: Sequence[ChatPrompt], *, enable_thinking: bool,
+) -> tuple[list[str], list[list[int]] | None, list[list[Any]], bool]:
     from sglang.srt.managers.io_struct import GenerateReqInput
     from sglang.srt.parser.jinja_template_utils import process_content_for_template_format
 
@@ -40,6 +39,16 @@ def prepare_score_batches(
         for prompt in messages
     ]
     input_ids = None if contains_media else tokenizer(texts, add_special_tokens=False)["input_ids"]
+    return texts, input_ids, images, contains_media
+
+
+def prepare_score_batches(
+    tokenizer: Any, processor: Any, prompts: Sequence[ChatPrompt], *,
+    enable_thinking: bool, submission: str, no_token_id: int, yes_token_id: int,
+) -> list[tuple[list[int], dict[str, Any]]]:
+    texts, input_ids, images, contains_media = _prepare_inputs(
+        tokenizer, processor, prompts, enable_thinking=enable_thinking,
+    )
     if submission == "all":
         batches = [list(range(len(prompts)))]
     elif contains_media:
@@ -60,7 +69,7 @@ def prepare_score_batches(
 
 def score_output(
     results: list[dict[str, Any]], *, expected_count: int, no_token_id: int, yes_token_id: int,
-) -> BinaryBackendOutput:
+) -> ScoreOutput:
     if len(results) != expected_count:
         raise ValueError("SGLang returned the wrong number of candidate scores")
     probabilities = []
@@ -78,7 +87,7 @@ def score_output(
         no_mass, yes_mass = math.exp(no - maximum), math.exp(yes - maximum)
         probabilities.append(yes_mass / (no_mass + yes_mass))
         prompt_tokens += meta["prompt_tokens"]
-    return BinaryBackendOutput(
+    return ScoreOutput(
         yes_probabilities=probabilities,
         usage=Usage(input_tokens=prompt_tokens, output_tokens=0),
     )

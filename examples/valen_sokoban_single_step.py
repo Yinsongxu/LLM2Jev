@@ -12,7 +12,6 @@ from sokoban_eval.env import ACTIONS, Board, State, transition
 from llm2jev.backend.sglang import SGLangBackend
 from llm2jev.core.questions import Choice
 from llm2jev.core.request import JevRequest
-from llm2jev.inference.binary import compile_binary_questions
 from llm2jev.inference.normalization import normalize_l1
 from llm2jev.inference.prompt import DefaultPromptRenderer
 
@@ -71,9 +70,9 @@ def evaluate(*, model_path: Path, eval_dir: Path, chunk_size: int,
                     )
                 },
             )
-            tasks = compile_binary_questions(rotated_request)
-            prepared.append((record_index, record, tasks, rotation))
-            prompts.extend(renderer.render(task) for task in tasks)
+            labels = [name.lower() for name, _ in rotated_items]
+            prepared.append((record_index, record, labels, rotation))
+            prompts.extend(renderer.render(rotated_request).score_prompts)
 
     probabilities: list[float] = []
     device_options = {
@@ -103,12 +102,11 @@ def evaluate(*, model_path: Path, eval_dir: Path, chunk_size: int,
     labels_by_record: list[list[str] | None] = [None for _ in records]
     cursor = 0
 
-    for record_index, record, tasks, rotation in prepared:
-        candidate_count = len(tasks)
+    for record_index, record, labels, rotation in prepared:
+        candidate_count = len(labels)
         raw = probabilities[cursor:cursor + candidate_count]
         cursor += candidate_count
         normalized = normalize_l1(raw)
-        labels = [str(task.candidate).lower() for task in tasks]
         if rotation == 0:
             labels_by_record[record_index] = labels
         for label, score in zip(labels, raw):

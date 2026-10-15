@@ -29,14 +29,21 @@
 
 ## 📰 最新动态
 
+- **10月15日** - **[Box 图片定位](docs/zh/multimodal.md#box定位图片中的目标)**：支持使用 Qwen3.5 的 0–1000 归一化坐标定位图片目标。
 - **10月11日** - **[v0.1.0](docs/zh/releases/v0.1.0.md)**：零训练，为 LLM / MLLM 加上 Jev 风格的决策能力。支持 SGLang、Transformers、MLX 多种后端，提供扩展自 OpenAI SDK 的 Python client。
 - **10月8日** - **[Valen 推箱子评测](examples/valen_sokoban.py)**：新增视觉推箱子 demo 和单步动作评测，基于 [Valen](https://github.com/Liuziyu77/Valen) 项目。
+
+<details>
+<summary>展开历史动态</summary>
+
 - **9月26日** - **[JevBench 测评](docs/zh/jevbench.md)**： LLM2Jev 在 231 个公开题目上的准确率和延时，p50延时不到Jev官方的1/10。
 - **9月23日** - **[MLX后端](docs/zh/usage.md#offline-python-api)**：新增图文评分、候选批量执行、有界前缀缓存和兼容的 System One HTTP 服务。
 - **9月22日** - **[多模态输入](docs/zh/multimodal.md)**：SGLang、Transformers 和 System One HTTP API 均支持图文请求。
 - **9月21日** - **[网页和贪吃蛇 demo](#demos)**：新增用于组合多种问题和模型决策的交互式示例。
 - **9月21日** - **冷启动前缀复用**：新增分阶段候选提交以复用 SGLang Radix Cache，并提供[架构说明](docs/zh/request-to-model.md)、[使用文档](docs/zh/shared-prefix-cache.md)和[性能测评](docs/zh/shared-prefix-benchmarks.md)。
 - **9月20日** - **SGLang 与 System One API**：新增 SGLang 评分后端，以及兼容的 [`POST /v1/systemone`](docs/zh/usage.md#online-http-服务) 接口。
+
+</details>
 
 
 

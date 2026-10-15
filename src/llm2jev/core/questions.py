@@ -16,6 +16,25 @@ def _validate_instructions(instructions: JSONContent | None) -> None:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class Box:
+    """Locate one target in an image, optionally using reference images."""
+
+    instructions: JSONContent
+
+    type: ClassVar[str] = "box"
+
+    def __post_init__(self) -> None:
+        if self.instructions is None:
+            raise ValueError("box instructions are required")
+        _validate_instructions(self.instructions)
+        if isinstance(self.instructions, str) and not self.instructions.strip():
+            raise ValueError("box instructions must not be blank")
+
+    def to_dict(self) -> dict[str, object]:
+        return {"type": self.type, "instructions": self.instructions}
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Choice:
     """A question that selects one option from a set of named choices."""
 

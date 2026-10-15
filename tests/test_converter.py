@@ -3,16 +3,18 @@ from collections.abc import Sequence
 from dataclasses import replace
 
 from llm2jev import (
-    BinaryBackendOutput,
+    ScoreOutput,
     ChatPrompt,
     Choice,
     ChoiceAnswer,
+    GenerationOutput,
     JevRequest,
     LLM2Jev,
     Noul,
     NoulAnswer,
     Score,
     ScoreAnswer,
+    RenderedPrompts,
     Usage,
 )
 
@@ -32,13 +34,18 @@ class FakeBackend:
         *,
         model: str,
         prompts: Sequence[ChatPrompt],
-    ) -> BinaryBackendOutput:
+    ) -> ScoreOutput:
         prompt_values = tuple(prompts)
         self.calls.append((model, prompt_values))
-        return BinaryBackendOutput(
+        return ScoreOutput(
             yes_probabilities=self.probabilities,
             usage=self.usage,
         )
+
+    def generate(
+        self, *, model: str, prompts: Sequence[ChatPrompt], max_new_tokens: int,
+    ) -> GenerationOutput:
+        raise AssertionError("binary requests must not generate text")
 
 
 class FailingBackend:
@@ -47,7 +54,12 @@ class FailingBackend:
         *,
         model: str,
         prompts: Sequence[ChatPrompt],
-    ) -> BinaryBackendOutput:
+    ) -> ScoreOutput:
+        raise RuntimeError("backend failed")
+
+    def generate(
+        self, *, model: str, prompts: Sequence[ChatPrompt], max_new_tokens: int,
+    ) -> GenerationOutput:
         raise RuntimeError("backend failed")
 
 
@@ -91,10 +103,15 @@ class LLM2JevTests(unittest.TestCase):
 
     def test_uses_custom_renderer_and_normalizer(self) -> None:
         class FixedRenderer:
-            def render(self, question: object) -> ChatPrompt:
-                return (
-                    {"role": "system", "content": "system"},
-                    {"role": "user", "content": "fixed"},
+            def render(self, request: JevRequest) -> RenderedPrompts:
+                return RenderedPrompts(
+                    score_prompts=(
+                        ({"role": "system", "content": "system"},
+                         {"role": "user", "content": "fixed"}),
+                        ({"role": "system", "content": "system"},
+                         {"role": "user", "content": "fixed"}),
+                    ),
+                    score_question_ids=("tone", "tone"),
                 )
 
         request = JevRequest(
@@ -170,11 +187,11 @@ class LLM2JevTests(unittest.TestCase):
             LLM2Jev(backend=FailingBackend()).evaluate(request)
 
 
-class BinaryBackendOutputTests(unittest.TestCase):
+class ScoreOutputTests(unittest.TestCase):
     def test_copies_and_validates_probabilities(self) -> None:
         probabilities = [0.2, 0.8]
 
-        output = BinaryBackendOutput(yes_probabilities=probabilities)
+        output = ScoreOutput(yes_probabilities=probabilities)
         probabilities[0] = 1.0
 
         self.assertEqual(output.yes_probabilities, (0.2, 0.8))
@@ -182,7 +199,7 @@ class BinaryBackendOutputTests(unittest.TestCase):
 
     def test_rejects_invalid_usage(self) -> None:
         with self.assertRaises(ValueError):
-            BinaryBackendOutput(
+            ScoreOutput(
                 yes_probabilities=[0.5],
                 usage=object(),  # type: ignore[arg-type]
             )

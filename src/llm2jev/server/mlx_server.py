@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ..backend.base import BinaryBackend
+from ..backend.base import Backend
 from .http_server import (
     ModelWorker as _ModelWorker,
     add_common_server_arguments,
@@ -24,7 +24,7 @@ def create_app(
     *,
     served_model_name: str | None = None,
     api_key: str | None = None,
-    backend_factory: Callable[[], BinaryBackend] | None = None,
+    backend_factory: Callable[[], Backend] | None = None,
     **backend_options: Any,
 ) -> Any:
     """Create an MLX app; the model loads during application startup."""
@@ -32,7 +32,7 @@ def create_app(
         raise ValueError("backend_options cannot be combined with backend_factory")
 
     if backend_factory is None:
-        def backend_factory() -> BinaryBackend:
+        def backend_factory() -> Backend:
             from ..backend.mlx import MLXBackend
 
             return MLXBackend(model_path, **backend_options)

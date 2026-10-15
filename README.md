@@ -25,14 +25,21 @@ Put your existing model weights to work on classification, scoring, and action s
 
 ## 📰 News
 
+- **October 15** - **[Box localization](docs/en/multimodal.md#box-locate-a-target-in-an-image):** locate image targets with Qwen3.5's normalized 0–1000 coordinates.
 - **October 11** - **[v0.1.0](docs/en/releases/v0.1.0.md):** give your LLM / MLLM Jev-style decision capabilities with zero training. Supports SGLang, Transformers, and MLX, with a Python client that extends the OpenAI SDK.
 - **October 8** - **[Valen Sokoban evaluation](examples/valen_sokoban.py):** added a visual Sokoban demo and single-step action evaluation based on [Valen](https://github.com/Liuziyu77/Valen).
+
+<details>
+<summary>Earlier updates</summary>
+
 - **September 26** - **[JevBench evaluation](docs/en/jevbench.md):** LLM2Jev accuracy and latency on 231 public items; P50 latency is below one tenth of the Jev official result.
 - **September 23** - **[MLX backend](docs/en/usage.md#offline-python-api):** added text and image scoring, candidate batching, bounded prefix reuse, and a compatible System One HTTP service.
 - **September 22** - **[Multimodal inputs](docs/en/multimodal.md):** added text-and-image requests for SGLang, Transformers, and the System One HTTP API.
 - **September 21** - **[Web and Snake demos](#demos):** added interactive examples for composing mixed questions and model-driven decisions.
 - **September 21** - **Prefix reuse on cold requests:** added staged candidate submission for reusing SGLang's Radix Cache, with [architecture](docs/en/request-to-model.md), [usage](docs/en/shared-prefix-cache.md), and [benchmark](docs/en/shared-prefix-benchmarks.md) documentation.
 - **September 20** - **SGLang and System One API:** added the SGLang scoring backend and a compatible [`POST /v1/systemone`](docs/en/usage.md#online-http-service) endpoint.
+
+</details>
 
 ## ✨ Key Features
 

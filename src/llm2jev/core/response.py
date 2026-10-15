@@ -5,18 +5,21 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from .answers import Answer, ChoiceAnswer, NoulAnswer, ScoreAnswer
+from .answers import Answer, BoxAnswer, ChoiceAnswer, NoulAnswer, ScoreAnswer
 
 
-def _format_json(value: object, level: int = 0) -> str:
+def _format_json(value: object, level: int = 0, *, coordinates: bool = False) -> str:
     if isinstance(value, float):
-        return f"{value:.2f}" if math.isfinite(value) else json.dumps(value)
+        if not math.isfinite(value):
+            return json.dumps(value)
+        return json.dumps(value) if coordinates else f"{value:.2f}"
     if isinstance(value, Mapping):
         if not value:
             return "{}"
         indent = "  " * (level + 1)
         items = (
-            f"{indent}{json.dumps(key, ensure_ascii=False)}: {_format_json(item, level + 1)}"
+            f"{indent}{json.dumps(key, ensure_ascii=False)}: "
+            f"{_format_json(item, level + 1, coordinates=coordinates or (key == 'box' and value.get('type') == 'box'))}"
             for key, item in value.items()
         )
         return "{\n" + ",\n".join(items) + "\n" + "  " * level + "}"
@@ -67,8 +70,8 @@ class JevResponse:
             raise ValueError("answers must contain at least one answer")
         if any(not isinstance(answer_id, str) or not answer_id for answer_id in answers):
             raise ValueError("answer IDs must be non-empty strings")
-        if any(not isinstance(answer, (ChoiceAnswer, ScoreAnswer, NoulAnswer)) for answer in answers.values()):
-            raise ValueError("answers must contain ChoiceAnswer, ScoreAnswer, or NoulAnswer instances")
+        if any(not isinstance(answer, (BoxAnswer, ChoiceAnswer, ScoreAnswer, NoulAnswer)) for answer in answers.values()):
+            raise ValueError("answers must contain BoxAnswer, ChoiceAnswer, ScoreAnswer, or NoulAnswer instances")
         object.__setattr__(self, "answers", answers)
 
     @property
@@ -82,6 +85,10 @@ class JevResponse:
     @property
     def nouls(self) -> dict[str, NoulAnswer]:
         return {name: answer for name, answer in self.answers.items() if isinstance(answer, NoulAnswer)}
+
+    @property
+    def boxes(self) -> dict[str, BoxAnswer]:
+        return {name: answer for name, answer in self.answers.items() if isinstance(answer, BoxAnswer)}
 
     @property
     def json(self) -> str:

@@ -1,26 +1,28 @@
 from .client import AsyncClient, Client
 from .inference import (
-    BinaryQuestion,
     ChatMessage,
     ChatPrompt,
     DefaultPromptRenderer,
     LLM2Jev,
     Normalizer,
     PromptRenderer,
+    RenderedPrompts,
     assemble_response,
-    compile_binary_questions,
     normalize_l1,
     serialize_content,
 )
 from .backend import (
-    BinaryBackend,
-    BinaryBackendOutput,
+    Backend,
+    ScoreOutput,
+    GenerationOutput,
     MLXBackend,
     SGLangBackend,
     TransformersBackend,
 )
 from .core import (
     Answer,
+    Box,
+    BoxAnswer,
     Choice,
     ChoiceAnswer,
     JSONContent,
@@ -37,10 +39,12 @@ from .core import (
 
 __all__ = [
     "Answer",
+    "Box",
+    "BoxAnswer",
     "AsyncClient",
-    "BinaryBackend",
-    "BinaryBackendOutput",
-    "BinaryQuestion",
+    "Backend",
+    "ScoreOutput",
+    "GenerationOutput",
     "ChatMessage",
     "ChatPrompt",
     "Choice",
@@ -57,6 +61,7 @@ __all__ = [
     "NoulAnswer",
     "Normalizer",
     "PromptRenderer",
+    "RenderedPrompts",
     "Score",
     "ScoreAnswer",
     "SGLangBackend",
@@ -64,7 +69,6 @@ __all__ = [
     "TransformersBackend",
     "Usage",
     "assemble_response",
-    "compile_binary_questions",
     "normalize_l1",
     "serialize_content",
 ]

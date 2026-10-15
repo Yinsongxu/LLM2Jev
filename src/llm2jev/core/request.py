@@ -4,13 +4,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TypeAlias
 
-from .questions import Choice, Noul, Score
+from .questions import Box, Choice, Noul, Score
 from ..utils.json import is_json_content
 from .types import State
-from .multimodal import validate_multimodal
+from .multimodal import contains_image, validate_multimodal
 
 
-Question: TypeAlias = Choice | Score | Noul
+Question: TypeAlias = Box | Choice | Score | Noul
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36,8 +36,13 @@ class JevRequest:
             raise ValueError("questions must contain at least one question")
         if any(not isinstance(question_id, str) or not question_id for question_id in questions):
             raise ValueError("question IDs must be non-empty strings")
-        if any(not isinstance(question, (Choice, Score, Noul)) for question in questions.values()):
-            raise ValueError("questions must contain Choice, Score, or Noul instances")
+        if any(not isinstance(question, (Box, Choice, Score, Noul)) for question in questions.values()):
+            raise ValueError("questions must contain Box, Choice, Score, or Noul instances")
+        for question in questions.values():
+            if isinstance(question, Box) and not (
+                contains_image(self.state) or contains_image(question.instructions)
+            ):
+                raise ValueError("box questions require an image in state or instructions")
         object.__setattr__(self, "questions", questions)
 
     def to_dict(self) -> dict[str, object]:

@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from llm2jev import BinaryBackendOutput, JevRequest, Noul, Usage
+from llm2jev import ScoreOutput, JevRequest, Noul, Usage
 from llm2jev.server.mlx_server import _ModelWorker, create_app
 
 
@@ -23,7 +23,7 @@ class FakeBackend:
         self.calls.append((model, prompts))
         if self.on_score is not None:
             self.on_score()
-        return BinaryBackendOutput(
+        return ScoreOutput(
             yes_probabilities=[0.75] * len(prompts),
             usage=Usage(input_tokens=7 * len(prompts), output_tokens=0),
         )
@@ -31,6 +31,9 @@ class FakeBackend:
     def close(self):
         self.thread_ids.append(threading.get_ident())
         self.closed = True
+
+    def generate(self, *, model, prompts, max_new_tokens):
+        raise AssertionError("binary requests must not generate text")
 
 
 class ModelWorkerTests(unittest.IsolatedAsyncioTestCase):

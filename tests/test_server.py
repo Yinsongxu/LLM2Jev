@@ -5,7 +5,7 @@ from contextlib import redirect_stderr
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from llm2jev import BinaryBackendOutput
+from llm2jev import ScoreOutput
 from llm2jev.server import mlx_server, server, transformers_server
 from llm2jev.inference.request_parser import parse_request
 from llm2jev.server.sglang_server import _parse_request
@@ -48,7 +48,7 @@ class RequestRenderingHTTPTests(unittest.IsolatedAsyncioTestCase):
         for module in (mlx_server, transformers_server):
             with self.subTest(backend=module.__name__), patch.dict("os.environ", {"LLM2JEV_API_KEY": ""}):
                 backend = Mock()
-                backend.score.return_value = BinaryBackendOutput(yes_probabilities=[0.8, 0.2])
+                backend.score.return_value = ScoreOutput(yes_probabilities=[0.8, 0.2])
                 app = module.create_app("local", backend_factory=lambda: backend)
                 async with app.router.lifespan_context(app):
                     async with httpx.AsyncClient(

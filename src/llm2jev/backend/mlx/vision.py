@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlparse
 
 from ...core.response import Usage
 from ...inference.prompt import ChatPrompt
-from ..base import BinaryBackendOutput
+from ..base import ScoreOutput
 from ..tokenization import _apply_chat_template
 from .batching import extract_cache, merge_caches
 from .prefix_cache import PrefixCache, shared_prefixes
@@ -92,7 +92,7 @@ class MLXVisionScorer:
         *,
         yes_token_id: int,
         no_token_id: int,
-    ) -> BinaryBackendOutput:
+    ) -> ScoreOutput:
         if not prompts:
             raise ValueError("prompts must not be empty")
         prepared = self._prepare(prompts)
@@ -137,7 +137,7 @@ class MLXVisionScorer:
 
         if any(value is None for value in probabilities):
             raise RuntimeError("MLX-VLM did not score every prompt")
-        return BinaryBackendOutput(
+        return ScoreOutput(
             yes_probabilities=[float(value) for value in probabilities],
             usage=Usage(
                 input_tokens=sum(prompt.embeddings.shape[1] for prompt in prepared),

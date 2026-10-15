@@ -4,6 +4,8 @@
 
 This guide explains **how LLM2Jev implements these requests using an LLM**, not the internals of Jev's official service.
 
+The candidate scoring flow below applies to Choice, Score, and Noul. [Box localization](multimodal.md#box-locate-a-target-in-an-image) uses coordinate generation with confidence from sampled-token probabilities, and produces output tokens.
+
 ## How do LLM requests and Jev requests differ?
 
 Suppose a customer says, “My card was charged twice. Please refund the extra charge.” We want to select a department and obtain probabilities for each department.

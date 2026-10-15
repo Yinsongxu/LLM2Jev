@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from pathlib import Path
 from threading import RLock
@@ -7,8 +8,8 @@ from typing import Any, Literal
 
 from ...core.response import Usage
 from ...inference.prompt import ChatPrompt
-from ..base import BinaryBackendOutput
-from ..tokenization import _apply_chat_template, _single_token_id
+from ..base import ScoreOutput, GenerationOutput
+from ..tokenization import _apply_chat_template, _generated_token_texts, _single_token_id
 from .scoring import TextScorer
 
 
@@ -106,14 +107,14 @@ class MLXBackend:
         *,
         model: str,
         prompts: Sequence[ChatPrompt],
-    ) -> BinaryBackendOutput:
+    ) -> ScoreOutput:
         del model  # The loaded model path is fixed when the backend is constructed.
         with self._lock:
             if self.model is None:
                 raise RuntimeError("MLXBackend is closed")
             return self._score(prompts)
 
-    def _score(self, prompts: Sequence[ChatPrompt]) -> BinaryBackendOutput:
+    def _score(self, prompts: Sequence[ChatPrompt]) -> ScoreOutput:
         prompt_values = tuple(prompts)
         if not prompt_values:
             raise ValueError("prompts must not be empty")
@@ -134,7 +135,7 @@ class MLXBackend:
                 raise ValueError("each rendered prompt must encode to at least one token")
             token_sequences.append(tokens)
 
-        return BinaryBackendOutput(
+        return ScoreOutput(
             yes_probabilities=self._text_scorer.score(
                 token_sequences, no_token_id=self.no_token_id, yes_token_id=self.yes_token_id,
             ),
@@ -148,6 +149,58 @@ class MLXBackend:
                 if scorer is not None:
                     scorer.clear_cache()
             self._mx.clear_cache()
+
+    def generate(
+        self, *, model: str, prompts: Sequence[ChatPrompt], max_new_tokens: int,
+    ) -> GenerationOutput:
+        """Use MLX-VLM's native generation without sharing mutable scoring caches."""
+        del model
+        with self._lock:
+            if self.model is None:
+                raise RuntimeError("MLXBackend is closed")
+            if self.processor is None:
+                raise ValueError("Box generation requires MLXBackend(multimodal=True)")
+            if not prompts:
+                raise ValueError("prompts must not be empty")
+            from mlx_vlm import stream_generate
+            from mlx_vlm.models.base import BaseImageProcessor
+            from .vision import _image_messages
+
+            prepared = [_image_messages(prompt) for prompt in prompts]
+            if any(len(sources) > 1 for _, sources in prepared) and isinstance(
+                getattr(self.processor, "image_processor", None), BaseImageProcessor,
+            ):
+                raise ValueError("this MLX-VLM image processor supports only one image per prompt")
+            token_texts, token_probabilities, input_tokens, output_tokens = [], [], 0, 0
+            for messages, sources in prepared:
+                rendered = _apply_chat_template(self.processor, messages, enable_thinking=False)
+                chunks, ids, probabilities, result = [], [], [], None
+                for chunk in stream_generate(
+                    self.model, self.processor, rendered, image=sources or None,
+                    max_tokens=max_new_tokens, temperature=0,
+                    enable_thinking=False, skip_special_tokens=True,
+                ):
+                    result = chunk
+                    chunks.append(chunk.text)
+                    if chunk.finish_reason is None or chunk.finish_reason == "stop":
+                        if chunk.token is None or chunk.logprobs is None:
+                            raise ValueError("MLX must return sampled-token logprobs")
+                        token = int(chunk.token)
+                        ids.append(token)
+                        probabilities.append(math.exp(float(chunk.logprobs.reshape(-1)[token].item())))
+                if result is None or result.finish_reason != "stop":
+                    raise ValueError("Box generation did not complete")
+                pieces = _generated_token_texts(self.tokenizer, ids)
+                if "".join(pieces) != "".join(chunks):
+                    raise ValueError("token texts must reconstruct the generated text")
+                token_texts.append(pieces)
+                token_probabilities.append(probabilities)
+                input_tokens += result.prompt_tokens
+                output_tokens += result.generation_tokens
+            return GenerationOutput(
+                token_texts=token_texts, token_probabilities=token_probabilities,
+                usage=Usage(input_tokens=input_tokens, output_tokens=output_tokens),
+            )
 
     def close(self) -> None:
         """Release this backend's model and caches; repeated calls are safe."""

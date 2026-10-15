@@ -6,15 +6,35 @@ from llm2jev import (
     JevRequest,
     Noul,
     NoulAnswer,
+    RenderedPrompts,
     Score,
     ScoreAnswer,
+    ScoreOutput,
     Usage,
     assemble_response,
-    compile_binary_questions,
 )
 
 
 class AssembleResponseTests(unittest.TestCase):
+    def test_maps_reordered_prompts_to_questions(self) -> None:
+        request = JevRequest(
+            state="message", model="local",
+            questions={
+                "tone": Choice(criteria={"calm": None, "angry": None}),
+                "check": Noul(),
+            },
+        )
+        response = assemble_response(
+            request=request,
+            rendered=RenderedPrompts(
+                score_prompts=((), (), ()),
+                score_question_ids=("check", "tone", "tone"),
+            ),
+            scored=ScoreOutput(yes_probabilities=(0.7, 0.2, 0.8)),
+        )
+        self.assertEqual(response.nouls["check"].noul, 0.7)
+        self.assertEqual(response.choices["tone"].probabilities, {"calm": 0.2, "angry": 0.8})
+
     def test_assembles_mixed_response(self) -> None:
         request = JevRequest(
             state="Customer requests a refund for a duplicate charge.",
@@ -30,13 +50,13 @@ class AssembleResponseTests(unittest.TestCase):
                 ),
             },
         )
-        tasks = compile_binary_questions(request)
 
         response = assemble_response(
             request=request,
-            tasks=tasks,
-            yes_probabilities=[0.6, 0.2, 0.2, 0.0, 0.76, 0.24, 0.91, 0.8, 0.2],
-            usage=Usage(input_tokens=120, output_tokens=0),
+            scored=ScoreOutput(
+                yes_probabilities=[0.6, 0.2, 0.2, 0.0, 0.76, 0.24, 0.91, 0.8, 0.2],
+                usage=Usage(input_tokens=120, output_tokens=0),
+            ),
         )
 
         department = response.answers["department"]
@@ -59,12 +79,10 @@ class AssembleResponseTests(unittest.TestCase):
             model="jev-latest",
             questions={"tone": Choice(criteria={"calm": None, "angry": None})},
         )
-        tasks = compile_binary_questions(request)
 
         response = assemble_response(
             request=request,
-            tasks=tasks,
-            yes_probabilities=[0.9, 0.3],
+            scored=ScoreOutput(yes_probabilities=[0.9, 0.3]),
         )
 
         answer = response.answers["tone"]
@@ -78,12 +96,10 @@ class AssembleResponseTests(unittest.TestCase):
             model="jev-latest",
             questions={"severity": Score(criteria=["Low", "Medium", "High"])},
         )
-        tasks = compile_binary_questions(request)
 
         response = assemble_response(
             request=request,
-            tasks=tasks,
-            yes_probabilities=[0.0, 0.0, 0.0],
+            scored=ScoreOutput(yes_probabilities=[0.0, 0.0, 0.0]),
         )
 
         answer = response.answers["severity"]
@@ -97,12 +113,10 @@ class AssembleResponseTests(unittest.TestCase):
             model="jev-latest",
             questions={"tone": Choice(criteria={"calm": None, "angry": None})},
         )
-        tasks = compile_binary_questions(request)
 
         response = assemble_response(
             request=request,
-            tasks=tasks,
-            yes_probabilities=[0.9, 0.1],
+            scored=ScoreOutput(yes_probabilities=[0.9, 0.1]),
             normalizer=lambda _: (0.6, 0.4),
         )
 
@@ -110,20 +124,12 @@ class AssembleResponseTests(unittest.TestCase):
         self.assertIsInstance(answer, ChoiceAnswer)
         self.assertEqual(answer.probabilities, {"calm": 0.6, "angry": 0.4})  # type: ignore[union-attr]
 
-    def test_rejects_task_mismatch(self) -> None:
+    def test_rejects_missing_scoring_output(self) -> None:
         request = JevRequest(
-            state="message",
-            model="jev-latest",
-            questions={"tone": Choice(criteria={"calm": None, "angry": None})},
+            state="message", model="jev-latest", questions={"check": Noul()},
         )
-        tasks = tuple(reversed(compile_binary_questions(request)))
-
-        with self.assertRaises(ValueError):
-            assemble_response(
-                request=request,
-                tasks=tasks,
-                yes_probabilities=[0.5, 0.5],
-            )
+        with self.assertRaisesRegex(ValueError, "each binary task"):
+            assemble_response(request=request)
 
     def test_rejects_probability_count_mismatch(self) -> None:
         request = JevRequest(
@@ -135,8 +141,7 @@ class AssembleResponseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             assemble_response(
                 request=request,
-                tasks=compile_binary_questions(request),
-                yes_probabilities=[],
+                scored=ScoreOutput(yes_probabilities=[.2, .8]),
             )
 
     def test_rejects_invalid_normalizer_output(self) -> None:
@@ -145,13 +150,11 @@ class AssembleResponseTests(unittest.TestCase):
             model="jev-latest",
             questions={"tone": Choice(criteria={"calm": None, "angry": None})},
         )
-        tasks = compile_binary_questions(request)
 
         with self.assertRaises(ValueError):
             assemble_response(
                 request=request,
-                tasks=tasks,
-                yes_probabilities=[0.5, 0.5],
+                scored=ScoreOutput(yes_probabilities=[0.5, 0.5]),
                 normalizer=lambda _: (1.0,),
             )
 
@@ -165,8 +168,7 @@ class AssembleResponseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             assemble_response(
                 request=request,
-                tasks=compile_binary_questions(request),
-                yes_probabilities=[0.8],
+                scored=ScoreOutput(yes_probabilities=[0.8]),
             )
 
 

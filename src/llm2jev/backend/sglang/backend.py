@@ -6,9 +6,10 @@ from typing import Any, Literal
 
 from ...core.response import Usage
 from ...inference.prompt import ChatPrompt
-from ..base import BinaryBackendOutput
+from ..base import ScoreOutput, GenerationOutput
 from ..tokenization import _single_token_id
 from .scoring import prepare_score_batches, score_output
+from .generation import generation_output, prepare_generation_request
 
 
 class SGLangBackend:
@@ -80,7 +81,7 @@ class SGLangBackend:
         *,
         model: str,
         prompts: Sequence[ChatPrompt],
-    ) -> BinaryBackendOutput:
+    ) -> ScoreOutput:
         del model  # The engine's model is fixed at construction.
         if self.engine is None:
             raise RuntimeError("SGLangBackend is closed")
@@ -105,10 +106,25 @@ class SGLangBackend:
             for index, probability in zip(indices, output.yes_probabilities):
                 probabilities[index] = probability
             input_tokens += output.usage.input_tokens
-        return BinaryBackendOutput(
+        return ScoreOutput(
             yes_probabilities=probabilities,
             usage=Usage(input_tokens=input_tokens, output_tokens=0),
         )
+
+    def generate(
+        self, *, model: str, prompts: Sequence[ChatPrompt], max_new_tokens: int,
+    ) -> GenerationOutput:
+        del model
+        if self.engine is None:
+            raise RuntimeError("SGLangBackend is closed")
+        if not prompts:
+            raise ValueError("prompts must not be empty")
+        arguments = prepare_generation_request(
+            self.tokenizer, getattr(self.engine.tokenizer_manager, "processor", None),
+            prompts, max_new_tokens=max_new_tokens,
+        )
+        result = self.engine.generate(prompt=arguments.pop("text"), **arguments)
+        return generation_output(result, expected_count=len(prompts), tokenizer=self.tokenizer)
 
     def close(self) -> None:
         """Shut down this backend's SGLang engine and release GPU resources."""

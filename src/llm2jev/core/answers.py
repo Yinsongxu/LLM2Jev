@@ -106,4 +106,28 @@ class NoulAnswer:
         return {"type": self.type, "noul": self.noul}
 
 
-Answer: TypeAlias = ChoiceAnswer | ScoreAnswer | NoulAnswer
+@dataclass(frozen=True, slots=True, kw_only=True)
+class BoxAnswer:
+    """Normalized edges and confidence from generated coordinate token probabilities."""
+
+    box: Mapping[str, float]
+    confidence: float
+
+    type: ClassVar[str] = "box"
+
+    def __post_init__(self) -> None:
+        box = dict(self.box)
+        if set(box) != {"top", "bottom", "left", "right"}:
+            raise ValueError("box must contain exactly top, bottom, left, and right")
+        for edge, value in box.items():
+            validate_probability(value, f"box {edge}")
+        if box["left"] >= box["right"] or box["top"] >= box["bottom"]:
+            raise ValueError("box must have left < right and top < bottom")
+        validate_probability(self.confidence, "confidence")
+        object.__setattr__(self, "box", box)
+
+    def to_dict(self) -> dict[str, object]:
+        return {"type": self.type, "box": dict(self.box), "confidence": self.confidence}
+
+
+Answer: TypeAlias = ChoiceAnswer | ScoreAnswer | NoulAnswer | BoxAnswer
