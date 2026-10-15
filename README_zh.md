@@ -29,7 +29,7 @@
 
 ## 📰 最新动态
 
-- **10月15日** - **[Box 图片定位](docs/zh/multimodal.md#box定位图片中的目标)**：支持使用 Qwen3.5 的 0–1000 归一化坐标定位图片目标。
+- **10月16日** - **[v0.2.0 发布](docs/zh/releases/v0.2.0.md)**：新增 `Box` 图片目标定位，返回归一化边界框；可在同一请求中与 `Choice`、`Score` 和 `Noul` 混用。详见 [Box 使用说明](docs/zh/multimodal.md#box定位图片中的目标)和 [TypeSafe Box 文档](https://docs.typesafe.ai/primitives/box)。
 - **10月11日** - **[v0.1.0](docs/zh/releases/v0.1.0.md)**：零训练，为 LLM / MLLM 加上 Jev 风格的决策能力。支持 SGLang、Transformers、MLX 多种后端，提供扩展自 OpenAI SDK 的 Python client。
 - **10月8日** - **[Valen 推箱子评测](examples/valen_sokoban.py)**：新增视觉推箱子 demo 和单步动作评测，基于 [Valen](https://github.com/Liuziyu77/Valen) 项目。
 
@@ -52,9 +52,9 @@
 - **无需训练或微调**：直接使用现有模型权重，将 SGLang、Transformers 或 Apple Silicon 上 MLX 支持的模型用于 Jev 风格的决策。
 - **聊天与决策共用服务和模型**：使用 SGLang 后端时，聊天接口与 `/v1/systemone` 共用推理引擎和已加载的模型。
 - **聊天与决策共用 client**：`Client` 与 `AsyncClient` 在 OpenAI Python SDK 上新增 `systemone.create()`，保留原有接口、认证、超时和重试机制；接口是否可用取决于后端。
-- **仅需 prefill**：读取 yes/no logits 并直接组装概率，无需生成答案或解析模型生成的 JSON。
+- **评分仅需 prefill**：`Choice`、`Score` 和 `Noul` 读取 yes/no logits，无需生成答案；`Box` 则生成图片坐标。
 - **图文决策**：在 `state` 或 `instructions` 中组合文字与图片，用于分类、评估与动作选择。
-- **一次请求，三类问题**：混合提交 `Choice`、`Score` 与 `Noul`，以类型化 Python 对象或 JSON 获取选项概率、量表评分和是非概率。
+- **一次请求，四类问题**：混合提交 `Choice`、`Score`、`Noul` 和 `Box`，以类型化 Python 对象或 JSON 获取选项概率、量表评分、是非概率和图片边界框。
 - **共享前缀复用**：通过 SGLang Radix Cache 或 MLX 显式前缀预热，减少候选之间的重复计算，冷请求内也能复用。
 
 所有候选共享 `state`，同一道题的候选还共享 `instructions`。SGLang 后端先评分一个真实的 `criteria` 候选来建立前缀缓存，再提交能够复用它的其他候选。每个候选只评分一次，减少长输入、多候选场景中的重复计算。MLX后端会先显式预热共享前缀，再评分候选后缀。

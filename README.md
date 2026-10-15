@@ -25,7 +25,7 @@ Put your existing model weights to work on classification, scoring, and action s
 
 ## 📰 News
 
-- **October 15** - **[Box localization](docs/en/multimodal.md#box-locate-a-target-in-an-image):** locate image targets with Qwen3.5's normalized 0–1000 coordinates.
+- **October 16** - **[v0.2.0 released](docs/en/releases/v0.2.0.md):** add `Box` image grounding with normalized bounding boxes, mixable with `Choice`, `Score`, and `Noul` in one request. See the [Box guide](docs/en/multimodal.md#box-locate-a-target-in-an-image) and [TypeSafe Box documentation](https://docs.typesafe.ai/primitives/box).
 - **October 11** - **[v0.1.0](docs/en/releases/v0.1.0.md):** give your LLM / MLLM Jev-style decision capabilities with zero training. Supports SGLang, Transformers, and MLX, with a Python client that extends the OpenAI SDK.
 - **October 8** - **[Valen Sokoban evaluation](examples/valen_sokoban.py):** added a visual Sokoban demo and single-step action evaluation based on [Valen](https://github.com/Liuziyu77/Valen).
 
@@ -46,9 +46,9 @@ Put your existing model weights to work on classification, scoring, and action s
 - **No training or fine-tuning:** use existing model weights to make Jev-style decisions with models supported by SGLang, Transformers, or MLX on Apple Silicon.
 - **Chat and decisions share a service and model:** with the SGLang backend, chat and `/v1/systemone` use the same inference engine and loaded model.
 - **Chat and decisions share a client:** `Client` and `AsyncClient` extend the OpenAI Python SDK with `systemone.create()`, preserving its existing interfaces, authentication, timeouts, and retries. Endpoint availability depends on the backend.
-- **Prefill only:** read yes/no logits and assemble probabilities directly, without generating an answer or parsing generated JSON.
+- **Prefill-only scoring:** `Choice`, `Score`, and `Noul` read yes/no logits without generating answers. `Box` generates normalized image coordinates.
 - **Text and image decisions:** combine text and images in `state` or `instructions` for classification, evaluation, and action selection.
-- **Three question types in one request:** mix `Choice`, `Score`, and `Noul` to get option probabilities, rubric scores, and yes/no probabilities as typed Python objects or JSON.
+- **Four question types in one request:** mix `Choice`, `Score`, `Noul`, and `Box` to get option probabilities, rubric scores, yes/no probabilities, and image bounding boxes as typed Python objects or JSON.
 - **Reuse shared prefixes:** reduce repeated computation across candidates with SGLang's Radix Cache or MLX's explicit prefix prefill, including within a cold request.
 
 Candidates share `state`, and candidates for the same question also share its `instructions`. The SGLang backend first scores a real `criteria` candidate to establish the prefix cache, then submits candidates that can reuse it. Each candidate is scored once, reducing repeated computation for long inputs with many candidates. The MLX backend explicitly prefills shared prefixes before scoring candidate suffixes.

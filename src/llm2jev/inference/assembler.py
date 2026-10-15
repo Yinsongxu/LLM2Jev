@@ -30,7 +30,7 @@ def _normalize(
     return normalized
 
 
-def _confidence(probabilities: Sequence[float]) -> float:
+def _distribution_confidence(probabilities: Sequence[float]) -> float:
     count = len(probabilities)
     if count < 2:
         raise ValueError("confidence requires at least two candidates")
@@ -88,7 +88,7 @@ def assemble_response(
             choice = max(labels, key=by_label.__getitem__)
             answers[question_id] = ChoiceAnswer(
                 choice=choice,
-                confidence=_confidence(probabilities),
+                confidence=_distribution_confidence(probabilities),
                 probabilities=by_label,
             )
         elif isinstance(question, Score):
@@ -97,7 +97,7 @@ def assemble_response(
             score = math.fsum(level * probability for level, probability in by_level.items())
             answers[question_id] = ScoreAnswer(
                 score=score,
-                confidence=_confidence(probabilities),
+                confidence=_distribution_confidence(probabilities),
                 legend=dict(enumerate(question.criteria)),
                 probabilities=by_level,
             )
