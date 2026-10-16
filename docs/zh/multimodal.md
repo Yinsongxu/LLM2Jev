@@ -158,6 +158,8 @@ curl http://localhost:30000/v1/systemone \
 
 如果关注前缀缓存，通常可把重复使用的内容放在前面，但是否能复用、是否更快，需要用实际模型和请求验证，不能仅凭图片位置保证。
 
+<a id="box定位图片中的目标"></a>
+
 ## Box：定位图片中的目标
 
 `Box` 返回单个目标的边界框，可与 `Choice`、`Score`、`Noul` 混合提交。首版使用 Qwen3.5 风格的 0–1000 坐标约定；其他模型需要能遵循相同的坐标和 JSON 输出要求。Transformers 和 MLX 需要以 `multimodal=True` 加载视觉模型，SGLang 需要加载支持图片的模型。

@@ -3,24 +3,25 @@ import { computed, ref } from 'vue'
 import { useData, withBase } from 'vitepress'
 import news from './news.json'
 
-const { lang } = useData()
+const { lang, site } = useData()
+const release = computed(() => site.value.themeConfig.release)
 const zh = computed(() => lang.value.startsWith('zh'))
 const page = (name: string) => withBase(`${zh.value ? '/zh/' : '/'}${name}`)
 const active = ref('Choice')
 const copied = ref(false)
 const types = ['Choice', 'Score', 'Noul']
 const text = computed(() => zh.value ? {
-  release: 'v0.1.0 · 现已就绪', eyebrow: '为你的模型，加上决策力',
+  release: `${release.value} · 现已就绪`, eyebrow: '为你的模型，加上决策力',
   title: ['给你的', 'LLM / MLLM', '装上决策引擎'],
-  intro: '零训练，直接获得 Jev 风格的决策能力。从文字与图片中完成分类、评分和动作选择，仅需 prefill。',
+  intro: '零训练，直接获得 Jev 风格的决策能力。从文字与图片中完成分类、评分和动作选择，用 Box 定位图片目标。',
   start: '开始使用', github: '查看 GitHub', backend: '选择你熟悉的后端',
   evidence: '输入证据', input: '我的信用卡被重复扣款了。', prompt: '哪个部门应当处理？',
   model: '已有模型权重', prefill: '一次前向，读取 yes / no logits', output: '结构化决策',
   billing: '账单问题', shipping: '物流配送', example: '示例概率 · 非实时推理',
   featureLabel: '更少的部署，直接的决策', featureTitle: '把已有模型的能力用起来。',
   features: [
-    { number: '01', title: '零训练，直接接入', detail: '保留现有模型权重，用 Choice、Score、Noul 描述任务，获取结构化决策和概率。', tag: 'NO FINE-TUNING' },
-    { number: '02', title: '仅需 prefill', detail: '从 yes/no logits 直接计算概率，无需逐 token 生成答案。共享前缀进一步减少候选间的重复计算。', tag: 'PREFILL ONLY' },
+    { number: '01', title: '零训练，直接接入', detail: '保留现有模型权重，用 Choice、Score、Noul 获取结构化决策和概率，用 Box 返回图片目标的归一化边界框。', tag: 'NO FINE-TUNING' },
+    { number: '02', title: '决策仅需 prefill', detail: 'Choice、Score、Noul 从 yes/no logits 直接计算概率，共享前缀进一步减少候选间的重复计算；Box 通过坐标生成完成定位。', tag: 'PREFILL SCORING' },
     { number: '03', title: '聊天与决策，共用 client', detail: '沿用 OpenAI SDK 的调用方式。SGLang 部署下，聊天与决策还共用服务、推理引擎和模型。', tag: 'OPENAI SDK EXTENSION' },
   ],
   codeLabel: '熟悉的调用方式，新的决策能力', codeTitle: '几行代码，让模型做决定。',
@@ -35,17 +36,17 @@ const text = computed(() => zh.value ? {
   newsLabel: '持续构建', newsTitle: '最新动态', allNews: '查看全部动态',
   closing: '让你的模型，开始做决策。', closingDetail: '开源 · Apache 2.0 · SGLang / Transformers / MLX',
 } : {
-  release: 'v0.1.0 · Ready to explore', eyebrow: 'YOUR MODEL. NEW POSSIBILITIES.',
+  release: `${release.value} · Ready to explore`, eyebrow: 'YOUR MODEL. NEW POSSIBILITIES.',
   title: ['Give your', 'LLM / MLLM', 'a decision engine.'],
-  intro: 'Jev-style decisions. Zero training. Classify, score, and choose actions from text and images—with prefill alone.',
+  intro: 'Jev-style decisions. Zero training. Classify, score, and choose actions from text and images. Locate image targets with Box.',
   start: 'Get started', github: 'Explore on GitHub', backend: 'RUN WITH THE BACKEND YOU KNOW',
   evidence: 'Evidence', input: 'My card was charged twice.', prompt: 'Which department should handle this?',
   model: 'Your existing model', prefill: 'Prefill → yes / no logits', output: 'Structured decision',
   billing: 'Billing', shipping: 'Shipping', example: 'Illustrative probabilities · not live inference',
   featureLabel: 'LESS SETUP. MORE DECISIONS.', featureTitle: 'Put your existing model to work.',
   features: [
-    { number: '01', title: 'Zero training. Ready to adapt.', detail: 'Keep your model weights. Describe tasks with Choice, Score, and Noul to get structured decisions and probabilities.', tag: 'NO FINE-TUNING' },
-    { number: '02', title: 'Decisions at prefill.', detail: 'Read yes/no logits directly, without decoding an answer. Shared prefixes reduce repeated computation across candidates.', tag: 'PREFILL ONLY' },
+    { number: '01', title: 'Zero training. Ready to adapt.', detail: 'Keep your model weights. Get structured decisions and probabilities with Choice, Score, and Noul, and normalized image bounding boxes with Box.', tag: 'NO FINE-TUNING' },
+    { number: '02', title: 'Decisions at prefill.', detail: 'Choice, Score, and Noul read yes/no logits directly, with shared prefixes reducing repeated computation. Box generates coordinates to locate targets.', tag: 'PREFILL SCORING' },
     { number: '03', title: 'Chat & decisions. Same client.', detail: 'Use the familiar OpenAI SDK interface. With SGLang, chat and decisions also share a service, inference engine, and loaded model.', tag: 'OPENAI SDK EXTENSION' },
   ],
   codeLabel: 'FAMILIAR INTERFACE. NEW CAPABILITIES.', codeTitle: 'A few lines. A clear decision.',
@@ -106,7 +107,7 @@ async function copyCode() {
   <div class="project-home">
     <section class="hero section-wrap">
       <div class="hero-copy">
-        <a class="release-pill" :href="page('releases/v0.1.0')"><span class="status-dot" />{{ text.release }}<span aria-hidden="true">↗</span></a>
+        <a class="release-pill" :href="page(`releases/${release}`)"><span class="status-dot" />{{ text.release }}<span aria-hidden="true">↗</span></a>
         <p class="eyebrow">{{ text.eyebrow }}</p>
         <h1><span>{{ text.title[0] }}</span><span class="model-title">{{ text.title[1] }}</span><span>{{ text.title[2] }}</span></h1>
         <p class="hero-description">{{ text.intro }}</p>

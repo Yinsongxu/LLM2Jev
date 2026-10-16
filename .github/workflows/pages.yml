@@ -9,6 +9,7 @@ on:
       - 'assets/**'
       - 'README.md'
       - 'README_zh.md'
+      - 'pyproject.toml'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 

@@ -1,6 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitepress'
 
 const repository = 'https://github.com/Yinsongxu/LLM2Jev'
+const project = readFileSync(new URL('../../pyproject.toml', import.meta.url), 'utf8')
+const version = project.match(/^version\s*=\s*"([^"]+)"/m)?.[1]
+if (!version) throw new Error('Missing project version in pyproject.toml')
+const release = `v${version}`
 const sidebar = (zh = false) => {
   const prefix = zh ? '/zh/' : '/'
   return [
@@ -25,6 +30,7 @@ const sidebar = (zh = false) => {
         { text: 'JevBench', link: `${prefix}jevbench` },
         { text: zh ? '前缀缓存性能' : 'Prefix-cache benchmarks', link: `${prefix}shared-prefix-benchmarks` },
         { text: zh ? '最新动态' : 'News', link: `${prefix}news` },
+        { text: release, link: `${prefix}releases/${release}` },
         { text: 'v0.1.0', link: `${prefix}releases/v0.1.0` },
       ],
     },
@@ -71,6 +77,7 @@ export default defineConfig({
     },
   },
   themeConfig: {
+    release,
     logo: '/favicon.svg',
     siteTitle: 'LLM2Jev',
     socialLinks: [{ icon: 'github', link: repository }],
