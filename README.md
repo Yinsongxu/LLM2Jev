@@ -27,7 +27,7 @@ Put your existing model weights to work on classification, scoring, and action s
 
 - **October 16** - **[v0.2.0 released](docs/en/releases/v0.2.0.md):** add `Box` image grounding with normalized bounding boxes, mixable with `Choice`, `Score`, and `Noul` in one request. See the [Box guide](docs/en/multimodal.md#box-locate-a-target-in-an-image) and [TypeSafe Box documentation](https://docs.typesafe.ai/primitives/box).
 - **October 11** - **[v0.1.0](docs/en/releases/v0.1.0.md):** give your LLM / MLLM Jev-style decision capabilities with zero training. Supports SGLang, Transformers, and MLX, with a Python client that extends the OpenAI SDK.
-- **October 8** - **[Valen Sokoban evaluation](examples/valen_sokoban.py):** added a visual Sokoban demo and single-step action evaluation based on [Valen](https://github.com/Liuziyu77/Valen).
+- **October 8** - **[Valen Sokoban evaluation](examples/valen_sokoban.py):** added a visual Sokoban demo and single-step action evaluation based on [Valen](https://github.com/Valen-Team/Valen).
 
 <details>
 <summary>Earlier updates</summary>
@@ -145,7 +145,7 @@ The recorded LLM2Jev latency is **P50 48 ms / P95 346 ms**, while the Jev 1.13.0
 
 ### Valen-Eval-Game
 
-The [single-step evaluator](examples/valen_sokoban_single_step.py) measures tie-aware optimal-action accuracy on 500 image-conditioned Sokoban questions from [Valen](https://github.com/Liuziyu77/Valen). It uses the multimodal `Choice` pipeline with the SGLang backend.
+The [single-step evaluator](examples/valen_sokoban_single_step.py) measures tie-aware optimal-action accuracy on 500 image-conditioned Sokoban questions from [Valen](https://github.com/Valen-Team/Valen). It uses the multimodal `Choice` pipeline with the SGLang backend.
 
 ## 🗺️ Roadmap
 
