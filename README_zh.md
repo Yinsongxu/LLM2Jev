@@ -31,7 +31,7 @@
 
 - **10月16日** - **[v0.2.0 发布](docs/zh/releases/v0.2.0.md)**：新增 `Box` 图片目标定位，返回归一化边界框；可在同一请求中与 `Choice`、`Score` 和 `Noul` 混用。详见 [Box 使用说明](docs/zh/multimodal.md#box定位图片中的目标)和 [TypeSafe Box 文档](https://docs.typesafe.ai/primitives/box)。
 - **10月11日** - **[v0.1.0](docs/zh/releases/v0.1.0.md)**：零训练，为 LLM / MLLM 加上 Jev 风格的决策能力。支持 SGLang、Transformers、MLX 多种后端，提供扩展自 OpenAI SDK 的 Python client。
-- **10月8日** - **[Valen 推箱子评测](examples/valen_sokoban.py)**：新增视觉推箱子 demo 和单步动作评测，基于 [Valen](https://github.com/Liuziyu77/Valen) 项目。
+- **10月8日** - **[Valen 推箱子评测](examples/valen_sokoban.py)**：新增视觉推箱子 demo 和单步动作评测，基于 [Valen](https://github.com/Valen-Team/Valen) 项目。
 
 <details>
 <summary>展开历史动态</summary>
@@ -150,7 +150,7 @@ print(chat.choices[0].message.content)
 
 ### Valen-Eval-Game
 
-[单步评测脚本](examples/valen_sokoban_single_step.py)对 [Valen](https://github.com/Liuziyu77/Valen) 数据集中的 500 条图像 Sokoban 题计算并列最优动作准确率，使用多模态 `Choice` 流程和 SGLang 后端。
+[单步评测脚本](examples/valen_sokoban_single_step.py)对 [Valen](https://github.com/Valen-Team/Valen) 数据集中的 500 条图像 Sokoban 题计算并列最优动作准确率，使用多模态 `Choice` 流程和 SGLang 后端。
 
 ## 🗺️ 近期规划
 

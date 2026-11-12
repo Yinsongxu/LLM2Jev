@@ -1,6 +1,6 @@
 """Sokoban evaluation utilities - copied from Valen benchmark.
 
-Source: https://github.com/Liuziyu77/Valen/tree/main/evaluation/sokoban
+Source: https://github.com/Valen-Team/Valen/tree/main/evaluation/sokoban
 
 This allows the example to run without requiring the full Valen evaluation environment.
 """
